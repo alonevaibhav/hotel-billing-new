@@ -15,7 +15,8 @@ class ReadyOrder extends StatelessWidget {
     final scaleFactor = 0.9;
     final controller = Get.put(ReadyOrderController(), permanent: true);
 
-    print('ReadyOrder built');
+    controller.fetchReadyOrders();
+
 
     return Scaffold(
       backgroundColor: Colors.grey[50],

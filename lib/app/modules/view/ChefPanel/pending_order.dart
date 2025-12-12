@@ -533,6 +533,7 @@ class AcceptOrder extends StatelessWidget {
   Widget build(BuildContext context) {
     final scaleFactor = 0.8;
     final controller = Get.put(AcceptOrderController());
+    controller.refreshOrders();
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: Stack(

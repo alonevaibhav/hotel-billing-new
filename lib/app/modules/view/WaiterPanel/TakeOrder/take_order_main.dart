@@ -11,6 +11,10 @@ class TakeOrderContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.put(TakeOrdersController(), permanent: true);
 
+
+    controller.refreshTables();
+
+
     return RefreshIndicator(
       onRefresh: () async {
         await controller.refreshTables();
@@ -179,130 +183,3 @@ class TakeOrderContent extends StatelessWidget {
   }
 }
 
-// import 'package:flutter/material.dart';
-// import 'package:get/get.dart';
-// import 'package:gap/gap.dart';
-// import '../../../../state/app_initial_state.dart';
-// import '../../../controllers/WaiterPanelController/take_order_controller.dart';
-// import '../../../widgets/table_widget.dart';
-//
-// class TakeOrderContent extends StatelessWidget {
-//   const TakeOrderContent({super.key});
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     final controller = Get.put(TakeOrdersController(), permanent: true);
-//
-//     return AsyncStateBuilder<TakeOrdersController>(
-//       controller: controller,
-//       isLoading: controller.isLoading,
-//       errorMessage: controller.errorMessage,
-//       onRefresh: () async {
-//         await controller.refreshTables();
-//       },
-//       onRetry: () {
-//         controller.refreshTables();
-//       },
-//       isEmpty: (controller) => controller.groupedTables.isEmpty,
-//       loadingText: 'Loading tables...',
-//       emptyStateText: 'No tables available',
-//       errorTitle: 'Failed to Load Tables',
-//       // Pass reactive variables that change via sockets
-//       observeData: [
-//         controller.groupedTables,
-//         controller.allTables,
-//       ],
-//
-//       builder: (controller) {
-//         // Display tables grouped by area
-//         return Container(
-//           padding: const EdgeInsets.all(16),
-//           child: ListView.builder(
-//             itemCount: controller.groupedTables.length,
-//             itemBuilder: (context, areaIndex) {
-//               final areaName = controller.groupedTables.keys.elementAt(areaIndex);
-//               final tables = controller.groupedTables[areaName] ?? [];
-//
-//               return Container(
-//                 margin: const EdgeInsets.only(bottom: 16),
-//                 decoration: BoxDecoration(
-//                   color: const Color(0xFFFFF9C4), // Light yellow background
-//                   borderRadius: BorderRadius.circular(12),
-//                 ),
-//                 padding: const EdgeInsets.all(16),
-//                 child: Column(
-//                   crossAxisAlignment: CrossAxisAlignment.start,
-//                   children: [
-//                     // Area title with table count
-//                     Row(
-//                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//                       children: [
-//                         Text(
-//                           areaName,
-//                           style: const TextStyle(
-//                             fontSize: 16,
-//                             fontWeight: FontWeight.w600,
-//                             color: Colors.black87,
-//                           ),
-//                         ),
-//                         Container(
-//                           padding: const EdgeInsets.symmetric(
-//                             horizontal: 8,
-//                             vertical: 4,
-//                           ),
-//                           decoration: BoxDecoration(
-//                             color: Colors.black12,
-//                             borderRadius: BorderRadius.circular(12),
-//                           ),
-//                           child: Text(
-//                             '${tables.length} tables',
-//                             style: const TextStyle(
-//                               fontSize: 12,
-//                               fontWeight: FontWeight.w500,
-//                               color: Colors.black87,
-//                             ),
-//                           ),
-//                         ),
-//                       ],
-//                     ),
-//
-//                     const Gap(16),
-//
-//                     // Tables grid
-//                     GridView.builder(
-//                       shrinkWrap: true,
-//                       physics: const NeverScrollableScrollPhysics(),
-//                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-//                         crossAxisCount: 3,
-//                         crossAxisSpacing: 8,
-//                         mainAxisSpacing: 8,
-//                         childAspectRatio: 0.8,
-//                       ),
-//                       itemCount: tables.length,
-//                       itemBuilder: (context, index) {
-//                         final tableInfo = tables[index];
-//                         final table = tableInfo.table;
-//                         final order = tableInfo.currentOrder;
-//
-//                         return TableCardWidget(
-//                           id: table.id,
-//                           tableNumber: int.tryParse(table.tableNumber) ?? 0,
-//                           price: (order?.totalAmount ?? 0).toInt(),
-//                           time: order != null
-//                               ? controller.calculateElapsedTime(order.createdAt)
-//                               : 0,
-//                           isOccupied: table.status == 'occupied',
-//                           onTap: () => controller.handleTableTap(tableInfo, context),
-//                         );
-//                       },
-//                     ),
-//                   ],
-//                 ),
-//               );
-//             },
-//           ),
-//         );
-//       },
-//     );
-//   }
-// }

@@ -1,5 +1,7 @@
-// // lib/app/core/services/socket_connection_manager.dart
+//
+//
 // import 'dart:developer' as developer;
+// import 'dart:async';
 // import 'package:get/get.dart';
 // import '../../core/constants/api_constant.dart';
 // import '../../core/services/socket_service.dart';
@@ -14,6 +16,10 @@
 //
 //   // ✅ Track connection attempts to prevent duplicates
 //   bool _connectionInProgress = false;
+//   Timer? _connectionTimeout;
+//
+//   // ✅ Store connection params for auto-reconnect
+//   Map<String, dynamic>? _lastConnectionParams;
 //
 //   /// Initialize the socket connection manager
 //   static Future<SocketConnectionManager> init() async {
@@ -31,6 +37,16 @@
 //     required String employeeName,
 //     String? authToken,
 //   }) async {
+//     // ✅ Store connection params for reconnection
+//     _lastConnectionParams = {
+//       'serverUrl': serverUrl,
+//       'hotelOwnerId': hotelOwnerId,
+//       'role': role,
+//       'userId': userId,
+//       'employeeName': employeeName,
+//       'authToken': authToken,
+//     };
+//
 //     // ✅ Prevent duplicate connections
 //     if (_socketService.isConnected) {
 //       developer.log(
@@ -50,7 +66,7 @@
 //
 //       // Wait for existing connection attempt to complete
 //       int attempts = 0;
-//       while (_connectionInProgress && attempts < 10) {
+//       while (_connectionInProgress && attempts < 20) { // Increased wait time
 //         await Future.delayed(Duration(milliseconds: 500));
 //         attempts++;
 //       }
@@ -61,6 +77,17 @@
 //
 //     try {
 //       _connectionInProgress = true;
+//
+//       // ✅ Set connection timeout
+//       _connectionTimeout = Timer(Duration(seconds: 10), () {
+//         if (!_socketService.isConnected) {
+//           developer.log(
+//             '⏰ Connection timeout - socket did not connect within 10 seconds',
+//             name: 'SocketConnectionManager',
+//           );
+//           _connectionInProgress = false;
+//         }
+//       });
 //
 //       developer.log(
 //         '🔌 Initiating socket connection...',
@@ -76,35 +103,40 @@
 //         authToken: authToken,
 //       );
 //
-//       // ✅ Setup connection state listeners (not duplicate event listeners)
+//       // ✅ Setup connection state listeners
 //       _setupConnectionStateListeners();
 //
-//       // Wait for connection to establish
-//       await Future.delayed(Duration(milliseconds: 1500));
+//       // ✅ Wait for connection with proper timeout
+//       int waitAttempts = 0;
+//       while (!_socketService.isConnected && waitAttempts < 30) {
+//         await Future.delayed(Duration(milliseconds: 200));
+//         waitAttempts++;
+//       }
 //
 //       isConnected.value = _socketService.isConnected;
 //
 //       if (isConnected.value) {
 //         developer.log(
-//           '✅ Socket connection successful',
+//           '✅ Socket connection successful after ${waitAttempts * 200}ms',
 //           name: 'SocketConnectionManager',
 //         );
 //       } else {
 //         developer.log(
-//           '⚠️ Socket initiated but not yet connected. Check backend server.',
+//           '⚠️ Socket initiated but not connected after ${waitAttempts * 200}ms. Check server availability.',
 //           name: 'SocketConnectionManager',
 //         );
 //       }
 //
 //       return isConnected.value;
-//     } catch (e) {
+//     } catch (e, stackTrace) {
 //       developer.log(
-//         '❌ Socket connection failed: $e',
+//         '❌ Socket connection failed: $e\n$stackTrace',
 //         name: 'SocketConnectionManager',
 //       );
 //       isConnected.value = false;
 //       return false;
 //     } finally {
+//       _connectionTimeout?.cancel();
 //       _connectionInProgress = false;
 //     }
 //   }
@@ -139,9 +171,13 @@
 //     );
 //   }
 //
-//   /// Setup connection state listeners (only for state management, not socket events)
+//   /// Setup connection state listeners
 //   void _setupConnectionStateListeners() {
-//     // Listen to high-level connection events for state updates
+//     // ✅ Remove old listeners to prevent duplicates
+//     _socketService.off('authenticated');
+//     _socketService.off('authentication_error');
+//
+//     // Listen to authentication events
 //     _socketService.on('authenticated', (data) {
 //       isConnected.value = true;
 //       developer.log(
@@ -156,6 +192,61 @@
 //         '❌ Authentication failed: $data',
 //         name: 'SocketConnectionManager',
 //       );
+//
+//       // ✅ Attempt auto-reconnect on auth failure
+//       _attemptAutoReconnect();
+//     });
+//
+//     // ✅ Monitor socket connection state changes
+//     ever(isConnected, (connected) {
+//       developer.log(
+//         '🔄 Connection state changed: $connected',
+//         name: 'SocketConnectionManager',
+//       );
+//
+//       if (!connected) {
+//         _attemptAutoReconnect();
+//       }
+//     });
+//   }
+//
+//   /// ✅ NEW: Auto-reconnect logic
+//   Timer? _reconnectTimer;
+//   int _reconnectAttempts = 0;
+//   final _maxReconnectAttempts = 5;
+//
+//   void _attemptAutoReconnect() {
+//     if (_lastConnectionParams == null || _reconnectAttempts >= _maxReconnectAttempts) {
+//       return;
+//     }
+//
+//     _reconnectTimer?.cancel();
+//     _reconnectAttempts++;
+//
+//     final delay = Duration(seconds: _reconnectAttempts * 2); // Exponential backoff
+//
+//     developer.log(
+//       '🔄 Scheduling auto-reconnect attempt $_reconnectAttempts in ${delay.inSeconds}s',
+//       name: 'SocketConnectionManager',
+//     );
+//
+//     _reconnectTimer = Timer(delay, () async {
+//       if (!_socketService.isConnected) {
+//         developer.log(
+//           '🔄 Auto-reconnect attempt $_reconnectAttempts',
+//           name: 'SocketConnectionManager',
+//         );
+//
+//         final params = _lastConnectionParams!;
+//         await connect(
+//           serverUrl: params['serverUrl'],
+//           hotelOwnerId: params['hotelOwnerId'],
+//           role: params['role'],
+//           userId: params['userId'],
+//           employeeName: params['employeeName'],
+//           authToken: params['authToken'],
+//         );
+//       }
 //     });
 //   }
 //
@@ -174,6 +265,10 @@
 //       name: 'SocketConnectionManager',
 //     );
 //
+//     _reconnectTimer?.cancel();
+//     _connectionTimeout?.cancel();
+//     _reconnectAttempts = 0;
+//
 //     _socketService.disconnect();
 //     isConnected.value = false;
 //     _connectionInProgress = false;
@@ -185,14 +280,15 @@
 //   }
 //
 //   /// Reconnect socket (disconnect and connect again)
-//   Future<bool> reconnect({
-//     required String serverUrl,
-//     required int hotelOwnerId,
-//     required String role,
-//     required int userId,
-//     required String employeeName,
-//     String? authToken,
-//   }) async {
+//   Future<bool> reconnect() async {
+//     if (_lastConnectionParams == null) {
+//       developer.log(
+//         '⚠️ Cannot reconnect - no previous connection params',
+//         name: 'SocketConnectionManager',
+//       );
+//       return false;
+//     }
+//
 //     developer.log(
 //       '🔄 Reconnecting socket...',
 //       name: 'SocketConnectionManager',
@@ -201,14 +297,24 @@
 //     disconnect();
 //     await Future.delayed(Duration(milliseconds: 1000)); // Wait before reconnecting
 //
+//     final params = _lastConnectionParams!;
 //     return await connect(
-//       serverUrl: serverUrl,
-//       hotelOwnerId: hotelOwnerId,
-//       role: role,
-//       userId: userId,
-//       employeeName: employeeName,
-//       authToken: authToken,
+//       serverUrl: params['serverUrl'],
+//       hotelOwnerId: params['hotelOwnerId'],
+//       role: params['role'],
+//       userId: params['userId'],
+//       employeeName: params['employeeName'],
+//       authToken: params['authToken'],
 //     );
+//   }
+//
+//   /// ✅ NEW: Force re-register all listeners (useful after connection issues)
+//   void forceReregisterListeners() {
+//     developer.log(
+//       '🔧 Forcing re-registration of all socket listeners',
+//       name: 'SocketConnectionManager',
+//     );
+//     _socketService.forceReregisterListeners();
 //   }
 //
 //   /// Check if socket is connected
@@ -224,17 +330,31 @@
 //       ...info,
 //       'managerConnected': isConnected.value,
 //       'connectionInProgress': _connectionInProgress,
+//       'reconnectAttempts': _reconnectAttempts,
+//       'hasStoredParams': _lastConnectionParams != null,
 //     };
 //   }
 //
-//   /// Reset connection state (useful for debugging/testing)
+//   /// Reset connection state
 //   void resetConnectionState() {
 //     _connectionInProgress = false;
+//     _reconnectAttempts = 0;
+//     _reconnectTimer?.cancel();
+//     _connectionTimeout?.cancel();
 //     isConnected.value = _socketService.isConnected;
+//
 //     developer.log(
 //       '🔄 Connection state reset. Current status: ${getConnectionInfo()}',
 //       name: 'SocketConnectionManager',
 //     );
+//   }
+//
+//   @override
+//   void onClose() {
+//     _reconnectTimer?.cancel();
+//     _connectionTimeout?.cancel();
+//     disconnect();
+//     super.onClose();
 //   }
 // }
 
@@ -432,8 +552,10 @@ class SocketConnectionManager extends GetxService {
         name: 'SocketConnectionManager',
       );
 
-      // ✅ Attempt auto-reconnect on auth failure
-      _attemptAutoReconnect();
+      // ✅ Attempt auto-reconnect on auth failure (only if we have valid params)
+      if (_lastConnectionParams != null) {
+        _attemptAutoReconnect();
+      }
     });
 
     // ✅ Monitor socket connection state changes
@@ -443,18 +565,19 @@ class SocketConnectionManager extends GetxService {
         name: 'SocketConnectionManager',
       );
 
-      if (!connected) {
+      if (!connected && _lastConnectionParams != null) {
         _attemptAutoReconnect();
       }
     });
   }
 
-  /// ✅ NEW: Auto-reconnect logic
+  /// ✅ Auto-reconnect logic
   Timer? _reconnectTimer;
   int _reconnectAttempts = 0;
   final _maxReconnectAttempts = 5;
 
   void _attemptAutoReconnect() {
+    // 🔥 FIX: Don't reconnect if params are cleared (after logout)
     if (_lastConnectionParams == null || _reconnectAttempts >= _maxReconnectAttempts) {
       return;
     }
@@ -470,6 +593,15 @@ class SocketConnectionManager extends GetxService {
     );
 
     _reconnectTimer = Timer(delay, () async {
+      // 🔥 FIX: Double-check params still exist before reconnecting
+      if (_lastConnectionParams == null) {
+        developer.log(
+          '❌ Reconnect cancelled - connection params cleared',
+          name: 'SocketConnectionManager',
+        );
+        return;
+      }
+
       if (!_socketService.isConnected) {
         developer.log(
           '🔄 Auto-reconnect attempt $_reconnectAttempts',
@@ -489,28 +621,35 @@ class SocketConnectionManager extends GetxService {
     });
   }
 
-  /// Disconnect socket
-  void disconnect() {
-    if (!_socketService.isConnected) {
-      developer.log(
-        '⚠️ Socket already disconnected',
-        name: 'SocketConnectionManager',
-      );
-      return;
-    }
-
+  /// 🔥 FIXED: Disconnect socket and clear reconnection params
+  Future<void> disconnect() async {
     developer.log(
       '🔌 Disconnecting socket...',
       name: 'SocketConnectionManager',
     );
 
+    // 🔥 FIX: Cancel timers first
     _reconnectTimer?.cancel();
+    _reconnectTimer = null;
     _connectionTimeout?.cancel();
+    _connectionTimeout = null;
+
+    // 🔥 FIX: Clear connection params to prevent auto-reconnect
+    _lastConnectionParams = null;
     _reconnectAttempts = 0;
 
+    developer.log(
+      '✅ Reconnect timers canceled and params cleared',
+      name: 'SocketConnectionManager',
+    );
+
+    // Disconnect the socket
     _socketService.disconnect();
     isConnected.value = false;
     _connectionInProgress = false;
+
+    // 🔥 FIX: Add small delay to ensure disconnect completes
+    await Future.delayed(Duration(milliseconds: 100));
 
     developer.log(
       '✅ Socket disconnected successfully',
@@ -533,9 +672,18 @@ class SocketConnectionManager extends GetxService {
       name: 'SocketConnectionManager',
     );
 
-    disconnect();
+    // Cancel any pending reconnect attempts
+    _reconnectTimer?.cancel();
+    _reconnectAttempts = 0;
+
+    // Disconnect first
+    _socketService.disconnect();
+    isConnected.value = false;
+    _connectionInProgress = false;
+
     await Future.delayed(Duration(milliseconds: 1000)); // Wait before reconnecting
 
+    // Reconnect with stored params
     final params = _lastConnectionParams!;
     return await connect(
       serverUrl: params['serverUrl'],
@@ -547,7 +695,7 @@ class SocketConnectionManager extends GetxService {
     );
   }
 
-  /// ✅ NEW: Force re-register all listeners (useful after connection issues)
+  /// ✅ Force re-register all listeners (useful after connection issues)
   void forceReregisterListeners() {
     developer.log(
       '🔧 Forcing re-registration of all socket listeners',
@@ -592,6 +740,7 @@ class SocketConnectionManager extends GetxService {
   void onClose() {
     _reconnectTimer?.cancel();
     _connectionTimeout?.cancel();
+    _lastConnectionParams = null; // 🔥 FIX: Clear params on close
     disconnect();
     super.onClose();
   }

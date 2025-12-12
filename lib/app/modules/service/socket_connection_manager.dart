@@ -363,6 +363,7 @@ import 'dart:developer' as developer;
 import 'dart:async';
 import 'package:get/get.dart';
 import '../../core/constants/api_constant.dart';
+import '../../core/services/api_service.dart';
 import '../../core/services/socket_service.dart';
 import '../../core/services/storage_service.dart';
 
@@ -520,15 +521,47 @@ class SocketConnectionManager extends GetxService {
       return false;
     }
 
+    // 🔥 Get token from ApiService
+    final authToken = await ApiService.getToken();
+    if (authToken == null) {
+      developer.log(
+        '⚠️ No auth token found in ApiService.getToken()',
+        name: 'SocketConnectionManager',
+      );
+      return false;
+    }
+
+    final serverUrl = ApiConstants.socketBaseUrl;
+    final hotelOwnerId = employeeData['hotelOwnerId'] ?? 0;
+    final role = authData['userRole'] ?? 'waiter';
+    final userId = employeeData['id'] ?? 0;
+    final employeeName = authData['userName'] ?? 'User';
+
+    // 🔥 Debug Log all values
+    developer.log(
+      '''
+---- SOCKET CONNECT PARAMS ----
+serverUrl      : $serverUrl
+hotelOwnerId   : $hotelOwnerId
+role           : $role
+userId         : $userId
+employeeName   : $employeeName
+authToken      : $authToken
+--------------------------------
+''',
+      name: 'SocketConnectionManager',
+    );
+
     return await connect(
-      serverUrl: ApiConstants.socketBaseUrl,
-      hotelOwnerId: employeeData['hotelOwnerId'] ?? 0,
-      role: authData['userRole'] ?? 'waiter',
-      userId: employeeData['id'] ?? 0,
-      employeeName: authData['userName'] ?? 'User',
-      authToken: authData['token'],
+      serverUrl: serverUrl,
+      hotelOwnerId: hotelOwnerId,
+      role: role,
+      userId: userId,
+      employeeName: employeeName,
+      authToken: authToken, // <-- Token now from ApiService
     );
   }
+
 
   /// Setup connection state listeners
   void _setupConnectionStateListeners() {

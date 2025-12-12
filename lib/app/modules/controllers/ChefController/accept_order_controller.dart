@@ -1,5 +1,3 @@
-//
-//
 // import 'package:flutter/material.dart';
 // import 'package:get/get.dart';
 // import 'dart:developer' as developer;
@@ -35,7 +33,8 @@
 //   final TextEditingController reasonController = TextEditingController();
 //
 //   // Socket & debounce
-//   final SocketConnectionManager _socketManager = SocketConnectionManager.instance;
+//   final SocketConnectionManager _socketManager =
+//       SocketConnectionManager.instance;
 //   Timer? _refreshDebounceTimer;
 //   final _refreshDebounceDelay = const Duration(milliseconds: 500);
 //   bool _isRefreshing = false;
@@ -47,9 +46,7 @@
 //     super.onInit();
 //     developer.log('AcceptOrderController initialized', name: 'AcceptOrders');
 //
-//     // ✅ CRITICAL: Add catch-all listener to see ALL events
 //     _setupDebugListener();
-//
 //     _setupSocketListeners();
 //     isSocketConnected.value = _socketManager.connectionStatus;
 //     fetchPendingOrders();
@@ -66,32 +63,22 @@
 //
 //   /// ==================== DEBUG LISTENER ====================
 //
-//   /// ✅ CRITICAL: Catch-all listener to see EVERY socket event
 //   void _setupDebugListener() {
-//     developer.log('🔍 Setting up debug listener for ALL events', name: 'AcceptOrders.Debug');
+//     developer.log('🔍 Setting up debug listener for ALL events',
+//         name: 'AcceptOrders.Debug');
 //
 //     _socketManager.socketService.socket?.onAny((event, data) {
 //       developer.log(
 //           '🔔 [DEBUG] Socket event received:\n'
-//               'Event: $event\n'
-//               'Data: $data',
-//           name: 'AcceptOrders.Debug'
-//       );
+//           'Event: $event\n'
+//           'Data: $data',
+//           name: 'AcceptOrders.Debug');
 //
-//       // Log the data structure
 //       if (data != null) {
 //         developer.log(
 //             '📋 [DEBUG] Data type: ${data.runtimeType}\n'
-//                 'Data content: ${data.toString()}',
-//             name: 'AcceptOrders.Debug'
-//         );
-//       }
-//
-//       // ✅ TEST: Manually call handlers to verify they work
-//       if (event == 'new_order' || event == 'placeOrder_ack') {
-//         developer.log('🧪 [TEST] Manually calling handler for $event',
+//             'Data content: ${data.toString()}',
 //             name: 'AcceptOrders.Debug');
-//         _handleNewOrder(data);
 //       }
 //     });
 //   }
@@ -99,10 +86,10 @@
 //   /// ==================== SOCKET SETUP ====================
 //
 //   void _setupSocketListeners() {
-//     developer.log('🔌 Setting up socket listeners', name: 'AcceptOrders.Socket');
+//     developer.log('🔌 Setting up socket listeners',
+//         name: 'AcceptOrders.Socket');
 //     _removeSocketListeners();
 //
-//     // ✅ FIXED: Direct registration with comprehensive event coverage
 //     final events = {
 //       'new_order': _handleNewOrder,
 //       'placeOrder_ack': _handleNewOrder,
@@ -133,7 +120,6 @@
 //       developer.log('✓ Registered: $eventName', name: 'AcceptOrders.Socket');
 //     });
 //
-//     // Monitor socket connection state
 //     ever(_socketManager.isConnected, _onSocketConnectionChanged);
 //
 //     developer.log('✅ ${events.length} socket listeners registered',
@@ -163,7 +149,6 @@
 //     developer.log('Socket connection: $connected', name: 'AcceptOrders.Socket');
 //
 //     if (connected) {
-//       // Refresh data when socket reconnects
 //       _debouncedRefreshOrders();
 //     }
 //   }
@@ -175,7 +160,8 @@
 //
 //     final data = _parseSocketData(rawData);
 //     if (data == null) {
-//       developer.log('❌ Failed to parse socket data', name: 'AcceptOrders.Socket');
+//       developer.log('❌ Failed to parse socket data',
+//           name: 'AcceptOrders.Socket');
 //       return;
 //     }
 //
@@ -187,23 +173,24 @@
 //
 //       final orderId = _extractOrderId(orderInfo) ??
 //           _extractOrderId(orderData) ??
-//           _extractOrderId(data) ?? 0;
+//           _extractOrderId(data) ??
+//           0;
 //
 //       final timestamp = data['timestamp'] ?? DateTime.now().toIso8601String();
 //       final eventId = 'new-order-$orderId-$timestamp';
 //
-//       developer.log(
-//           '📊 Extracted data: orderId=$orderId',
-//           name: 'AcceptOrders.Socket'
-//       );
+//       developer.log('📊 Extracted data: orderId=$orderId',
+//           name: 'AcceptOrders.Socket');
 //
 //       if (orderId == 0) {
-//         developer.log('⚠️ Invalid order ID in new order event', name: 'AcceptOrders.Socket');
+//         developer.log('⚠️ Invalid order ID in new order event',
+//             name: 'AcceptOrders.Socket');
 //         return;
 //       }
 //
 //       if (_isDuplicateEvent(eventId)) {
-//         developer.log('⏭️ Duplicate event detected: $eventId', name: 'AcceptOrders.Socket');
+//         developer.log('⏭️ Duplicate event detected: $eventId',
+//             name: 'AcceptOrders.Socket');
 //         return;
 //       }
 //
@@ -212,9 +199,7 @@
 //         name: 'AcceptOrders.Socket',
 //       );
 //
-//       // Debounced refresh with notification
 //       _debouncedRefreshOrdersWithNotification(orderId);
-//
 //     } catch (e, stackTrace) {
 //       developer.log(
 //         '❌ Error handling new order: $e\n$stackTrace',
@@ -238,19 +223,21 @@
 //       final eventId = 'status-update-$orderId-$newStatus-$timestamp';
 //
 //       if (_isDuplicateEvent(eventId)) {
-//         developer.log('⏭️ Duplicate status update: $eventId', name: 'AcceptOrders.Socket');
+//         developer.log('⏭️ Duplicate status update: $eventId',
+//             name: 'AcceptOrders.Socket');
 //         return;
 //       }
 //
-//       developer.log('Status: $newStatus for order #$orderId', name: 'AcceptOrders.Socket');
+//       developer.log('Status: $newStatus for order #$orderId',
+//           name: 'AcceptOrders.Socket');
 //
 //       if (orderId == 0 || newStatus == null) {
-//         developer.log('⚠️ Invalid order status update data', name: 'AcceptOrders.Socket');
+//         developer.log('⚠️ Invalid order status update data',
+//             name: 'AcceptOrders.Socket');
 //         return;
 //       }
 //
 //       if (newStatus != 'pending') {
-//         // Order moved out of pending state
 //         final orderIndex = ordersData.indexWhere((o) => o.orderId == orderId);
 //         if (orderIndex != -1) {
 //           ordersData.removeAt(orderIndex);
@@ -262,7 +249,6 @@
 //           );
 //         }
 //       } else {
-//         // Refresh to get updated data
 //         _debouncedRefreshOrders();
 //       }
 //     } catch (e, stackTrace) {
@@ -273,6 +259,7 @@
 //     }
 //   }
 //
+//   // ✅ CRITICAL FIX: Immediate local update + background refresh
 //   void _handleItemStatusUpdate(dynamic rawData) {
 //     final data = _parseSocketData(rawData);
 //     if (data == null) return;
@@ -282,36 +269,93 @@
 //     try {
 //       final itemData = data['data'] ?? data;
 //       final orderId = _extractOrderId(itemData) ?? 0;
-//       final itemId = itemData['itemId'] ?? itemData['item_id'] ?? itemData['id'] ?? 0;
-//       final newStatus = itemData['status'] ?? itemData['item_status'];
+//       final itemId =
+//           itemData['itemId'] ?? itemData['item_id'] ?? itemData['id'] ?? 0;
+//       final newStatus = itemData['status'] ??
+//           itemData['item_status'] ??
+//           itemData['new_status'];
+//       final updatedBy = itemData['updated_by'] ?? '';
 //
 //       final timestamp = data['timestamp'] ?? DateTime.now().toIso8601String();
 //       final eventId = 'item-status-$orderId-$itemId-$newStatus-$timestamp';
 //
 //       if (_isDuplicateEvent(eventId)) {
-//         developer.log('⏭️ Duplicate item update: $eventId', name: 'AcceptOrders.Socket');
+//         developer.log('⏭️ Duplicate item update: $eventId',
+//             name: 'AcceptOrders.Socket');
 //         return;
 //       }
 //
-//       developer.log('Item #$itemId status: $newStatus for order #$orderId',
+//       developer.log(
+//           '🍽️ Item #$itemId status: $newStatus for order #$orderId (updated by: $updatedBy)',
 //           name: 'AcceptOrders.Socket');
 //
 //       if (orderId == 0 || itemId == 0 || newStatus == null) {
-//         developer.log('⚠️ Invalid item status update data', name: 'AcceptOrders.Socket');
+//         developer.log('⚠️ Invalid item status update data',
+//             name: 'AcceptOrders.Socket');
 //         return;
 //       }
 //
-//       // Remove from processing items
 //       processingItems.remove(itemId);
 //
+//       // ✅ KEY FIX: Immediate local update for ALL chefs
 //       if (newStatus != 'pending') {
-//         _removeItemFromOrder(orderId, itemId);
+//         developer.log(
+//           '🚀 IMMEDIATE UPDATE: Item #$itemId moved to "$newStatus" by $updatedBy',
+//           name: 'AcceptOrders.Socket',
+//         );
+//
+//         // ✅ Step 1: Immediate local removal (instant UI update for all chefs)
+//         final orderIndex = ordersData.indexWhere((o) => o.orderId == orderId);
+//
+//         if (orderIndex != -1) {
+//           final order = ordersData[orderIndex];
+//           final itemIndex = order.items.indexWhere((item) => item.id == itemId);
+//
+//           if (itemIndex != -1) {
+//             // Remove the item immediately
+//             order.items.removeAt(itemIndex);
+//
+//             if (order.items.isEmpty) {
+//               // Remove entire order if no pending items left
+//               ordersData.removeAt(orderIndex);
+//               _notifiedOrders.remove(orderId);
+//               developer.log(
+//                 '✅ IMMEDIATE: Removed order #$orderId (no more pending items)',
+//                 name: 'AcceptOrders.Socket',
+//               );
+//             } else {
+//               // Update order with remaining items
+//               ordersData[orderIndex] = order;
+//               developer.log(
+//                 '✅ IMMEDIATE: Removed item #$itemId from order #$orderId (${order.items.length} items remaining)',
+//                 name: 'AcceptOrders.Socket',
+//               );
+//             }
+//
+//             // Force immediate UI update
+//             ordersData.refresh();
+//
+//             developer.log(
+//               '🎯 All chefs now see updated pending list (item #$itemId removed)',
+//               name: 'AcceptOrders.Socket',
+//             );
+//           }
+//         }
+//
+//         // ✅ Step 2: Background sync to ensure consistency
+//         developer.log(
+//           '🔄 Background sync: Refreshing from server for data consistency',
+//           name: 'AcceptOrders.Socket',
+//         );
+//         _debouncedRefreshOrders();
 //       }
 //     } catch (e, stackTrace) {
 //       developer.log(
 //         '❌ Error handling item status update: $e\n$stackTrace',
 //         name: 'AcceptOrders.Socket.Error',
 //       );
+//       // On error, do a full refresh to recover
+//       _debouncedRefreshOrders();
 //     }
 //   }
 //
@@ -329,12 +373,14 @@
 //       final eventId = 'items-added-$orderId-$timestamp';
 //
 //       if (_isDuplicateEvent(eventId)) {
-//         developer.log('⏭️ Duplicate items added: $eventId', name: 'AcceptOrders.Socket');
+//         developer.log('⏭️ Duplicate items added: $eventId',
+//             name: 'AcceptOrders.Socket');
 //         return;
 //       }
 //
 //       if (orderId == 0) {
-//         developer.log('⚠️ Invalid order ID in items added event', name: 'AcceptOrders.Socket');
+//         developer.log('⚠️ Invalid order ID in items added event',
+//             name: 'AcceptOrders.Socket');
 //         return;
 //       }
 //
@@ -373,14 +419,15 @@
 //
 //   bool _isDuplicateEvent(String eventId) {
 //     if (_processedEvents.contains(eventId)) {
-//       developer.log('⏭️ SKIPPING duplicate: $eventId', name: 'AcceptOrders.Socket');
+//       developer.log('⏭️ SKIPPING duplicate: $eventId',
+//           name: 'AcceptOrders.Socket');
 //       return true;
 //     }
 //     _processedEvents.add(eventId);
 //
-//     // Clean up old events (keep last 100)
 //     if (_processedEvents.length > 100) {
-//       final toRemove = _processedEvents.take(_processedEvents.length - 100).toList();
+//       final toRemove =
+//           _processedEvents.take(_processedEvents.length - 100).toList();
 //       _processedEvents.removeAll(toRemove);
 //     }
 //     return false;
@@ -389,10 +436,7 @@
 //   int? _extractOrderId(Map<String, dynamic>? data) {
 //     if (data == null) return null;
 //
-//     return data['id'] ??
-//         data['order_id'] ??
-//         data['orderId'] ??
-//         data['orderid'];
+//     return data['id'] ?? data['order_id'] ?? data['orderId'] ?? data['orderid'];
 //   }
 //
 //   void _removeItemFromOrder(int orderId, int itemId) {
@@ -404,7 +448,6 @@
 //         order.items.removeWhere((item) => item.id == itemId);
 //
 //         if (order.items.isEmpty) {
-//           // Remove entire order if no items left
 //           ordersData.removeAt(orderIndex);
 //           _notifiedOrders.remove(orderId);
 //           developer.log(
@@ -412,7 +455,6 @@
 //             name: 'AcceptOrders',
 //           );
 //         } else {
-//           // Update the order with remaining items
 //           ordersData[orderIndex] = order;
 //           ordersData.refresh();
 //           developer.log(
@@ -428,13 +470,12 @@
 //   }
 //
 //   void _debouncedRefreshOrders() {
-//     developer.log('🔄 Debouncing refresh... (timer will fire in ${_refreshDebounceDelay.inMilliseconds}ms)',
-//         name: 'AcceptOrders.Socket');
+//     developer.log('🔄 Debouncing refresh...', name: 'AcceptOrders.Socket');
 //     _refreshDebounceTimer?.cancel();
 //     _refreshDebounceTimer = Timer(_refreshDebounceDelay, () {
 //       developer.log('⏰ Debounce timer fired!', name: 'AcceptOrders.Socket');
 //       if (!_isRefreshing) {
-//         developer.log('⏰ Executing debounced refresh - calling fetchPendingOrders()',
+//         developer.log('⏰ Executing debounced refresh',
 //             name: 'AcceptOrders.Socket');
 //         fetchPendingOrders();
 //       } else {
@@ -444,7 +485,8 @@
 //     });
 //   }
 //
-//   void _debouncedRefreshOrdersWithNotification(int orderId, {bool isItemsAdded = false}) {
+//   void _debouncedRefreshOrdersWithNotification(int orderId,
+//       {bool isItemsAdded = false}) {
 //     developer.log('🔄 Debouncing refresh with notification...',
 //         name: 'AcceptOrders.Socket');
 //     _refreshDebounceTimer?.cancel();
@@ -458,9 +500,9 @@
 //   /// ==================== API METHODS ====================
 //
 //   Future<void> fetchPendingOrdersWithNotification(
-//       int triggeredOrderId, {
-//         bool isItemsAdded = false,
-//       }) async {
+//     int triggeredOrderId, {
+//     bool isItemsAdded = false,
+//   }) async {
 //     if (_isRefreshing) {
 //       developer.log('⏭️ Already refreshing - skipping', name: 'AcceptOrders');
 //       return;
@@ -471,7 +513,8 @@
 //       isLoading.value = true;
 //       errorMessage.value = '';
 //
-//       developer.log('📡 Calling repository.getPendingOrders()', name: 'AcceptOrders');
+//       developer.log('📡 Calling repository.getPendingOrders()',
+//           name: 'AcceptOrders');
 //       final groupedOrders = await _repository.getPendingOrders();
 //
 //       developer.log(
@@ -482,17 +525,16 @@
 //       ordersData.value = groupedOrders;
 //       ordersData.refresh();
 //
-//       final triggeredOrder = groupedOrders.firstWhereOrNull(
-//               (order) => order.orderId == triggeredOrderId
-//       );
+//       final triggeredOrder = groupedOrders
+//           .firstWhereOrNull((order) => order.orderId == triggeredOrderId);
 //
 //       if (triggeredOrder != null) {
 //         if (!_notifiedOrders.contains(triggeredOrderId)) {
 //           _notifiedOrders.add(triggeredOrderId);
 //
-//           // Clean up old notifications (keep last 50)
 //           if (_notifiedOrders.length > 50) {
-//             final toRemove = _notifiedOrders.take(_notifiedOrders.length - 50).toList();
+//             final toRemove =
+//                 _notifiedOrders.take(_notifiedOrders.length - 50).toList();
 //             _notifiedOrders.removeAll(toRemove);
 //           }
 //
@@ -503,7 +545,7 @@
 //
 //           developer.log(
 //             '✅ Notification shown for grouped order #${triggeredOrder.orderId} '
-//                 'with ${triggeredOrder.totalItemsCount} items',
+//             'with ${triggeredOrder.totalItemsCount} items',
 //             name: 'AcceptOrders',
 //           );
 //         } else {
@@ -539,18 +581,18 @@
 //
 //     try {
 //       _isRefreshing = true;
-//       developer.log('🚀 Starting fetch - isRefresh=$isRefresh', name: 'AcceptOrders');
+//       developer.log('🚀 Starting fetch - isRefresh=$isRefresh',
+//           name: 'AcceptOrders');
 //
 //       if (isRefresh) {
 //         isRefreshing.value = true;
-//         developer.log('📊 Set isRefreshing observable to true', name: 'AcceptOrders');
 //       } else {
 //         isLoading.value = true;
-//         developer.log('📊 Set isLoading observable to true', name: 'AcceptOrders');
 //       }
 //       errorMessage.value = '';
 //
-//       developer.log('📡 Calling repository.getPendingOrders()', name: 'AcceptOrders');
+//       developer.log('📡 Calling repository.getPendingOrders()',
+//           name: 'AcceptOrders');
 //       final groupedOrders = await _repository.getPendingOrders();
 //
 //       developer.log(
@@ -559,8 +601,6 @@
 //       );
 //
 //       ordersData.value = groupedOrders;
-//
-//       // Force UI update
 //       ordersData.refresh();
 //       developer.log('🔄 Forced observable refresh', name: 'AcceptOrders');
 //     } catch (e, stackTrace) {
@@ -592,7 +632,6 @@
 //     }
 //   }
 //
-//   /// Accept individual item
 //   Future<void> acceptItem(int orderId, int itemId) async {
 //     try {
 //       processingItems.add(itemId);
@@ -609,23 +648,18 @@
 //         name: 'AcceptOrders',
 //       );
 //
-//       // Remove item from the order locally
 //       _removeItemFromOrder(orderId, itemId);
-//
 //     } catch (e, stackTrace) {
 //       errorMessage.value = e.toString();
 //       developer.log(
 //         '❌ Error accepting item #$itemId: $e\n$stackTrace',
 //         name: 'AcceptOrders.Error',
 //       );
-//
-//
 //     } finally {
 //       processingItems.remove(itemId);
 //     }
 //   }
 //
-//   /// Show rejection dialog for individual item
 //   void showRejectDialogForItem(int orderId, int itemId) {
 //     selectedOrderId.value = orderId;
 //     selectedItemId.value = itemId;
@@ -635,7 +669,6 @@
 //     rejectionCategory.value = 'out_of_stock';
 //   }
 //
-//   /// Hide rejection dialog
 //   void hideRejectDialog() {
 //     isRejectDialogVisible.value = false;
 //     selectedOrderId.value = null;
@@ -653,7 +686,6 @@
 //     rejectionCategory.value = category;
 //   }
 //
-//   /// Reject individual item
 //   Future<void> rejectItem(BuildContext context) async {
 //     if (reasonController.text.trim().isEmpty) {
 //       SnackBarUtil.showWarning(
@@ -667,7 +699,6 @@
 //
 //     if (selectedOrderId.value == null || selectedItemId.value == null) return;
 //
-//     // ✅ Store values before they get cleared
 //     final orderId = selectedOrderId.value!;
 //     final itemId = selectedItemId.value!;
 //     final reason = reasonController.text.trim();
@@ -693,7 +724,6 @@
 //         duration: const Duration(seconds: 2),
 //       );
 //
-//       // Remove item from the order locally
 //       _removeItemFromOrder(orderId, itemId);
 //
 //       developer.log(
@@ -775,7 +805,8 @@
 //
 //   bool get socketConnected => isSocketConnected.value;
 //   int get totalPendingOrders => ordersData.length;
-//   int get totalPendingItems => ordersData.fold(0, (sum, order) => sum + order.totalItemsCount);
+//   int get totalPendingItems =>
+//       ordersData.fold(0, (sum, order) => sum + order.totalItemsCount);
 //   Map<String, dynamic> getSocketInfo() => _socketManager.getConnectionInfo();
 // }
 
@@ -784,6 +815,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:developer' as developer;
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import '../../../core/utils/snakbar_utils.dart';
 import '../../../data/repositories/pending_orders_repository.dart';
 import '../../../data/models/ResponseModel/pending_orders_model.dart';
@@ -827,9 +859,16 @@ class AcceptOrderController extends GetxController {
     super.onInit();
     developer.log('AcceptOrderController initialized', name: 'AcceptOrders');
 
-    _setupDebugListener();
+    // ✅ CRITICAL FIX: Only setup debug listener in debug mode
+    if (kDebugMode) {
+      _setupDebugListener();
+    }
+
+    // ✅ Setup socket listeners immediately
     _setupSocketListeners();
     isSocketConnected.value = _socketManager.connectionStatus;
+
+    // ✅ Fetch orders after socket setup
     fetchPendingOrders();
   }
 
@@ -845,22 +884,23 @@ class AcceptOrderController extends GetxController {
   /// ==================== DEBUG LISTENER ====================
 
   void _setupDebugListener() {
-    developer.log('🔍 Setting up debug listener for ALL events', name: 'AcceptOrders.Debug');
+    if (!kDebugMode) return; // ✅ Only in debug mode
+
+    developer.log('🔍 Setting up debug listener for ALL events',
+        name: 'AcceptOrders.Debug');
 
     _socketManager.socketService.socket?.onAny((event, data) {
       developer.log(
           '🔔 [DEBUG] Socket event received:\n'
               'Event: $event\n'
               'Data: $data',
-          name: 'AcceptOrders.Debug'
-      );
+          name: 'AcceptOrders.Debug');
 
       if (data != null) {
         developer.log(
             '📋 [DEBUG] Data type: ${data.runtimeType}\n'
                 'Data content: ${data.toString()}',
-            name: 'AcceptOrders.Debug'
-        );
+            name: 'AcceptOrders.Debug');
       }
     });
   }
@@ -871,6 +911,7 @@ class AcceptOrderController extends GetxController {
     developer.log('🔌 Setting up socket listeners', name: 'AcceptOrders.Socket');
     _removeSocketListeners();
 
+    // ✅ Simplified event registration - same pattern as ReadyOrderController
     final events = {
       'new_order': _handleNewOrder,
       'placeOrder_ack': _handleNewOrder,
@@ -901,6 +942,7 @@ class AcceptOrderController extends GetxController {
       developer.log('✓ Registered: $eventName', name: 'AcceptOrders.Socket');
     });
 
+    // ✅ Connection monitoring
     ever(_socketManager.isConnected, _onSocketConnectionChanged);
 
     developer.log('✅ ${events.length} socket listeners registered',
@@ -930,6 +972,7 @@ class AcceptOrderController extends GetxController {
     developer.log('Socket connection: $connected', name: 'AcceptOrders.Socket');
 
     if (connected) {
+      developer.log('🔄 Socket reconnected - refreshing orders', name: 'AcceptOrders.Socket');
       _debouncedRefreshOrders();
     }
   }
@@ -953,15 +996,13 @@ class AcceptOrderController extends GetxController {
 
       final orderId = _extractOrderId(orderInfo) ??
           _extractOrderId(orderData) ??
-          _extractOrderId(data) ?? 0;
+          _extractOrderId(data) ??
+          0;
 
       final timestamp = data['timestamp'] ?? DateTime.now().toIso8601String();
       final eventId = 'new-order-$orderId-$timestamp';
 
-      developer.log(
-          '📊 Extracted data: orderId=$orderId',
-          name: 'AcceptOrders.Socket'
-      );
+      developer.log('📊 Extracted data: orderId=$orderId', name: 'AcceptOrders.Socket');
 
       if (orderId == 0) {
         developer.log('⚠️ Invalid order ID in new order event', name: 'AcceptOrders.Socket');
@@ -979,7 +1020,6 @@ class AcceptOrderController extends GetxController {
       );
 
       _debouncedRefreshOrdersWithNotification(orderId);
-
     } catch (e, stackTrace) {
       developer.log(
         '❌ Error handling new order: $e\n$stackTrace',
@@ -1014,6 +1054,7 @@ class AcceptOrderController extends GetxController {
         return;
       }
 
+      // ✅ If order is no longer pending, remove it
       if (newStatus != 'pending') {
         final orderIndex = ordersData.indexWhere((o) => o.orderId == orderId);
         if (orderIndex != -1) {
@@ -1047,7 +1088,9 @@ class AcceptOrderController extends GetxController {
       final itemData = data['data'] ?? data;
       final orderId = _extractOrderId(itemData) ?? 0;
       final itemId = itemData['itemId'] ?? itemData['item_id'] ?? itemData['id'] ?? 0;
-      final newStatus = itemData['status'] ?? itemData['item_status'] ?? itemData['new_status'];
+      final newStatus = itemData['status'] ??
+          itemData['item_status'] ??
+          itemData['new_status'];
       final updatedBy = itemData['updated_by'] ?? '';
 
       final timestamp = data['timestamp'] ?? DateTime.now().toIso8601String();
@@ -1060,14 +1103,14 @@ class AcceptOrderController extends GetxController {
 
       developer.log(
           '🍽️ Item #$itemId status: $newStatus for order #$orderId (updated by: $updatedBy)',
-          name: 'AcceptOrders.Socket'
-      );
+          name: 'AcceptOrders.Socket');
 
       if (orderId == 0 || itemId == 0 || newStatus == null) {
         developer.log('⚠️ Invalid item status update data', name: 'AcceptOrders.Socket');
         return;
       }
 
+      // ✅ Remove from processing state immediately
       processingItems.remove(itemId);
 
       // ✅ KEY FIX: Immediate local update for ALL chefs
@@ -1105,7 +1148,7 @@ class AcceptOrderController extends GetxController {
               );
             }
 
-            // Force immediate UI update
+            // ✅ Force immediate UI update
             ordersData.refresh();
 
             developer.log(
@@ -1195,20 +1238,17 @@ class AcceptOrderController extends GetxController {
     }
     _processedEvents.add(eventId);
 
-    if (_processedEvents.length > 100) {
-      final toRemove = _processedEvents.take(_processedEvents.length - 100).toList();
-      _processedEvents.removeAll(toRemove);
+    // ✅ Better cleanup: only keep last 50 events
+    if (_processedEvents.length > 50) {
+      _processedEvents.clear();
+      developer.log('🧹 Cleared processed events cache', name: 'AcceptOrders.Socket');
     }
     return false;
   }
 
   int? _extractOrderId(Map<String, dynamic>? data) {
     if (data == null) return null;
-
-    return data['id'] ??
-        data['order_id'] ??
-        data['orderId'] ??
-        data['orderid'];
+    return data['id'] ?? data['order_id'] ?? data['orderId'] ?? data['orderid'];
   }
 
   void _removeItemFromOrder(int orderId, int itemId) {
@@ -1242,25 +1282,22 @@ class AcceptOrderController extends GetxController {
   }
 
   void _debouncedRefreshOrders() {
-    developer.log('🔄 Debouncing refresh...',
+    developer.log('🔄 Debouncing refresh... (timer will fire in ${_refreshDebounceDelay.inMilliseconds}ms)',
         name: 'AcceptOrders.Socket');
     _refreshDebounceTimer?.cancel();
     _refreshDebounceTimer = Timer(_refreshDebounceDelay, () {
       developer.log('⏰ Debounce timer fired!', name: 'AcceptOrders.Socket');
       if (!_isRefreshing) {
-        developer.log('⏰ Executing debounced refresh',
-            name: 'AcceptOrders.Socket');
+        developer.log('⏰ Executing debounced refresh', name: 'AcceptOrders.Socket');
         fetchPendingOrders();
       } else {
-        developer.log('⏭️ Skipping refresh - already in progress',
-            name: 'AcceptOrders.Socket');
+        developer.log('⏭️ Skipping refresh - already in progress', name: 'AcceptOrders.Socket');
       }
     });
   }
 
   void _debouncedRefreshOrdersWithNotification(int orderId, {bool isItemsAdded = false}) {
-    developer.log('🔄 Debouncing refresh with notification...',
-        name: 'AcceptOrders.Socket');
+    developer.log('🔄 Debouncing refresh with notification...', name: 'AcceptOrders.Socket');
     _refreshDebounceTimer?.cancel();
     _refreshDebounceTimer = Timer(_refreshDebounceDelay, () {
       if (!_isRefreshing) {
@@ -1296,17 +1333,17 @@ class AcceptOrderController extends GetxController {
       ordersData.value = groupedOrders;
       ordersData.refresh();
 
-      final triggeredOrder = groupedOrders.firstWhereOrNull(
-              (order) => order.orderId == triggeredOrderId
-      );
+      final triggeredOrder = groupedOrders
+          .firstWhereOrNull((order) => order.orderId == triggeredOrderId);
 
       if (triggeredOrder != null) {
         if (!_notifiedOrders.contains(triggeredOrderId)) {
           _notifiedOrders.add(triggeredOrderId);
 
+          // ✅ Better cleanup
           if (_notifiedOrders.length > 50) {
-            final toRemove = _notifiedOrders.take(_notifiedOrders.length - 50).toList();
-            _notifiedOrders.removeAll(toRemove);
+            _notifiedOrders.clear();
+            developer.log('🧹 Cleared notified orders cache', name: 'AcceptOrders');
           }
 
           await showGroupedOrderNotification(
@@ -1418,7 +1455,6 @@ class AcceptOrderController extends GetxController {
       );
 
       _removeItemFromOrder(orderId, itemId);
-
     } catch (e, stackTrace) {
       errorMessage.value = e.toString();
       developer.log(
@@ -1575,6 +1611,7 @@ Registered Events: ${info['registeredEvents']}
 
   bool get socketConnected => isSocketConnected.value;
   int get totalPendingOrders => ordersData.length;
-  int get totalPendingItems => ordersData.fold(0, (sum, order) => sum + order.totalItemsCount);
+  int get totalPendingItems =>
+      ordersData.fold(0, (sum, order) => sum + order.totalItemsCount);
   Map<String, dynamic> getSocketInfo() => _socketManager.getConnectionInfo();
 }

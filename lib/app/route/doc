@@ -1,0 +1,125 @@
+
+import 'dart:developer' as developer;
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../modules/auth/login_view.dart';
+import 'app_bindings.dart';
+
+
+class AppRoutes {
+  // Route names - keep same naming convention
+  static const login = '/login';
+  static const forgotPassword = '/forgotPassword';
+  static const mainDashboard = '/mainDashboard';
+  static const userDetail = '/user-detail';
+  static const userDetailInfo = '/user-userDetailInfo';
+
+
+  // Initialize bindings once at app start
+  static void initializeBindings() {
+    AppBindings().dependencies();
+  }
+
+  // Simple Go Router configuration for mobile
+  static final GoRouter router = GoRouter(
+    initialLocation: login,
+    routes: [
+      GoRoute(
+        path: login,
+        builder: (context, state) => const LoginView(),
+      ),
+
+      GoRoute(
+        path: forgotPassword,
+        builder: (context, state) => const Placeholder(),
+      ),
+
+      GoRoute(
+        path: mainDashboard,
+        builder: (context, state) => const Placeholder(),
+      ),
+
+
+
+      // ========== NAVIGATION WITH ARGUMENTS ==========
+
+      GoRoute(
+        path: userDetail,
+        builder: (context, state) {
+          final userData = state.extra as UserData?;
+          return UserDetailScreen(userData: userData);
+        },
+      ),
+
+      // ========== NAVIGATION WITH ARGUMENTS (No Model) ==========
+      GoRoute(
+        path: userDetailInfo,
+        builder: (context, state) {
+          // Get data as Map instead of UserData model
+          final userData = state.extra as Map<String, dynamic>?;
+          return UserDetailScreen(userData: userData);
+        },
+      ),
+
+    ],
+  );
+}
+
+// navigation_service.dart - Simple navigation helpers
+class NavigationService {
+  static final GoRouter _router = AppRoutes.router;
+
+  // Simple navigation methods
+  static void goToLogin() {
+    _router.go(AppRoutes.login);
+  }
+
+  static void goToMainDashboard() {
+    _router.go(AppRoutes.mainDashboard);
+  }
+
+  static void goBack() {
+    if (_router.canPop()) {
+      _router.pop();
+    }
+  }
+
+
+
+
+
+
+  // ========== NAVIGATION WITH ARGUMENTS ==========
+  static void goToUserDetail(UserData userData) {
+    _router.go(AppRoutes.userDetail, extra: userData);
+
+
+    // ========== NAVIGATION WITH ARGUMENTS (No Model) ==========
+
+    // Option 1: Pass Map<String, dynamic>
+     void userDetailInfo(Map<String, dynamic> userData) {
+      _router.go(AppRoutes.userDetail, extra: userData);
+    }
+  }
+
+  static bool canGoBack() => _router.canPop();
+}
+
+
+// =========== GO ROUTER VS GETX COMPARISON ===========
+
+/*
+GetX Method              →    Go Router Equivalent
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Get.to()                →    router.push()           // Add to stack
+Get.toNamed()           →    router.push('/route')   // Add to stack with name
+Get.off()               →    router.pushReplacement() // Replace current
+Get.offNamed()          →    router.pushReplacement('/route') // Replace with name
+Get.offAll()            →    router.go()             // Clear stack and go
+Get.offAllNamed()       →    router.go('/route')     // Clear stack and go to route
+Get.back()              →    router.pop()            // Go back
+Get.until()             →    Multiple router.pop()   // Pop until condition
+
+ARGUMENTS:
+Get.toNamed('/route', arguments: data)  →  router.push('/route', extra: data)
+Get.toNamed('/route', parameters: {})   →  router.push('/route?key=value')

@@ -1,5 +1,4 @@
-//
-//
+
 // import 'package:flutter/material.dart';
 // import 'package:flutter_screenutil/flutter_screenutil.dart';
 // import 'package:get/get.dart';
@@ -106,7 +105,7 @@
 //
 //             SizedBox(height: 20.h),
 //
-//             _buildSampleCredentials(),
+//             // _buildSampleCredentials(),
 //           ],
 //         ),
 //       ),
@@ -423,8 +422,6 @@
 //       ),
 //     );
 //   }
-//
-//
 // }
 
 
@@ -730,12 +727,14 @@ class LoginView extends StatelessWidget {
 
   Widget _buildSampleCredentials(LoginViewController controller) {
     final credentials = [
-      // {'username': 'GRANW4456', 'password': 'John*4863', 'role': 'Waiter'},
-      // {'username': 'GRANC001', 'password': 'password', 'role': 'Chef'},
+      {'username': 'GANW286139', 'password': 'Sourav&2304', 'role': 'Waiter'},
+      {'username': 'GANEC002', 'password': 'Yougesh&6401', 'role': 'Chef'},
+      {'username': 'GANW243210', 'password': 'Gourav@9022', 'role': 'Waiter'},
+      {'username': 'GANEC001', 'password': 'Sid#6396', 'role': 'Chef'},
       {'username': 'jaychef', 'password': 'password', 'role': 'Chef'},
       {'username': 'shivamchef', 'password': 'password', 'role': 'Chef'},
       {'username': 'GANEW002', 'password': 'Vaibhav%2066', 'role': 'Waiter'},
-      {'username': 'mohit1', 'password': 'password', 'role': 'Staff'},
+      {'username': 'mohit1', 'password': 'password', 'role': 'Waiter'},
     ];
 
     return Container(

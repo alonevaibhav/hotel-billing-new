@@ -2,12 +2,14 @@ class ApiConstants {
 
   // Base URL
   static const String baseUrl = "https://api-dev.squrepos.com";
-  // static const String baseUrl = "https://qb2267h4-3005.inc1.devtunnels.ms";
+  // static const String baseUrl = "https://api.squrepos.com";
+  // static const String baseUrl = "https://qb2267h4-3000.inc1.devtunnels.ms";
 
   //Socket Base URL
 
   static const String socketBaseUrl = "https://api-dev.squrepos.com";
-  // static const String socketBaseUrl = "https://qb2267h4-3005.inc1.devtunnels.ms";
+  // static const String socketBaseUrl = "https://api.squrepos.com";
+  // static const String socketBaseUrl = "https://qb2267h4-3000.inc1.devtunnels.ms";
 
   // Auth
   static const String hostelBillingLogin = "/api/owner/employee/login";
@@ -30,6 +32,10 @@ class ApiConstants {
   static String waiterPatchOrderUpdate(int orderId,int id) => "/api/owner/employee/orders/$orderId/items/$id/status";
 
   static const String waiterGetHistory = "/api/owner/employee/orders/get";
+
+  // static const String waiterPatchInformation = "/api/owner/employee/orders/:orderId/customer-details";
+
+  static String waiterPatchInformation(int orderId) => "/api/owner/employee/orders/$orderId/customer-details";
 
 
 

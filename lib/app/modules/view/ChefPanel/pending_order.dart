@@ -16,7 +16,9 @@ class AcceptOrder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scaleFactor = 0.8;
-    final controller = Get.put(AcceptOrderController(),permanent: true);
+    // final controller = Get.put(AcceptOrderController(),permanent: true);
+    final controller = Get.find<AcceptOrderController>();
+
     controller.refreshOrders();
     return Scaffold(
       backgroundColor: Colors.grey[50],

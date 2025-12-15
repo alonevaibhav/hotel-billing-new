@@ -643,6 +643,9 @@ class OrderManagementController extends GetxController {
   void navigateToAddItems(int tableId, dynamic tableInfoData) => _uiHelper.navigateToAddItems(tableId, tableInfoData);
   bool canProceedToCheckout(int tableId) => _uiHelper.canProceedToCheckout(tableId);
 
+  Future<void> updateCustomerInfo(int orderId, String name, String phone) =>
+      _orderProcessor.updateCustomerInfo(orderId, name, phone);
+
   bool get socketConnected => isSocketConnected.value;
   Future<void> reconnectSocket() => _socketHandler.reconnect();
 
@@ -1031,10 +1034,30 @@ class _OrderProcessor {
     }
   }
 
+  /// Modified proceedToCheckout to handle customer info updates
   Future<void> proceedToCheckout(int tableId, BuildContext context, dynamic tableInfoData, List<Map<String, dynamic>> orderItems) async {
     final tableInfo = _controller._stateManager._parseTableInfo(tableInfoData);
+    final state = _controller.getTableState(tableId);
+
+    // Check if there's an existing order and customer info has changed
+    if (state.isReorderScenario && state.placedOrderId.value != null) {
+      final hasCustomerInfo = state.fullNameController.text.trim().isNotEmpty ||
+          state.phoneController.text.trim().isNotEmpty;
+
+      // Update customer info if provided
+      if (hasCustomerInfo) {
+        await updateCustomerInfo(
+          state.placedOrderId.value!,
+          state.fullNameController.text.trim(),
+          state.phoneController.text.trim(),
+        );
+      }
+    }
+
     await _processOrder(tableId, context, tableInfo, orderItems, 'KOT sent to manager');
   }
+
+
 
   Future<void> _processOrder(int tableId, BuildContext context, TableInfo? tableInfo, List<Map<String, dynamic>> orderItems, String successMessage) async {
     try {
@@ -1118,6 +1141,45 @@ class _OrderProcessor {
     Get.find<TakeOrdersController>().refreshTables();
     NavigationService.goBack();
   }
+
+  /// Update customer information for existing order
+  Future<void> updateCustomerInfo(int orderId, String customerName, String customerPhone) async {
+    try {
+      _controller.isLoading.value = true;
+
+      await _controller._orderRepository.updateCustomerInformation(
+        orderId,
+        customerName.trim(),
+        customerPhone.trim(),
+      );
+
+      developer.log('✅ Customer info updated for order: $orderId', name: 'ORDER_API');
+
+      if (Get.context != null) {
+        SnackBarUtil.showSuccess(
+          Get.context!,
+          'Customer information updated successfully',
+          title: 'Updated',
+          duration: const Duration(seconds: 2),
+        );
+      }
+    } catch (e) {
+      developer.log('❌ Error updating customer info: $e', name: 'ORDER_API');
+      if (Get.context != null) {
+        SnackBarUtil.showError(
+          Get.context!,
+          'Failed to update customer information',
+          title: 'Error',
+        );
+      }
+    } finally {
+      _controller.isLoading.value = false;
+    }
+  }
+
+
+
+
 }
 
 // ==================== UI HELPER ====================

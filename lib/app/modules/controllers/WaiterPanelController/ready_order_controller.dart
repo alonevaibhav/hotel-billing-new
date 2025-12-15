@@ -571,6 +571,10 @@
 //   Map<String, dynamic> getSocketInfo() => _socketManager.getConnectionInfo();
 // }
 
+
+
+
+
 import 'package:get/get.dart';
 import 'dart:developer' as developer;
 import 'dart:async';

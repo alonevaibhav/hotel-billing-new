@@ -418,7 +418,9 @@ class DoneOrder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scaleFactor = 0.9;
-    final controller = Get.put(DoneOrderController());
+    // final controller = Get.put(DoneOrderController());
+    final controller = Get.find<DoneOrderController>();
+
     controller.refreshOrders(); // Initial data fetch
     return Scaffold(
       backgroundColor: Colors.grey[50],

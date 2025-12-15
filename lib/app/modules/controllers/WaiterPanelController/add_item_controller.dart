@@ -507,28 +507,16 @@ class AddItemsController extends GetxController {
         await _loadAllItems();
       } else {
         _setError('No categories available');
-        _handleCategoryLoadError('Failed to load categories');
       }
     } catch (e) {
       developer.log('Error loading categories: $e', name: 'ADD_ITEMS');
       _setError('Failed to load menu categories. Please try again.');
-      _handleCategoryLoadError('Error loading categories: $e');
     } finally {
       isLoading.value = false;
     }
   }
 
-  void _handleCategoryLoadError(String message) {
-    if (Get.context != null) {
-      SnackBarUtil.showError(
-        Get.context!,
-        message,
-        title: 'Error',
-        duration: const Duration(seconds: 2),
-      );
-    }
-    categories.value = ['All'];
-  }
+
 
   /// Select category
   Future<void> selectCategory(String categoryName) async {
@@ -543,9 +531,7 @@ class AddItemsController extends GetxController {
       return;
     }
 
-    final category = categoryObjects.firstWhereOrNull(
-          (cat) => cat.categoryName == categoryName,
-    );
+    final category = categoryObjects.firstWhereOrNull((cat) => cat.categoryName == categoryName,);
 
     if (category == null) {
       developer.log('Category not found: $categoryName', name: 'ADD_ITEMS');

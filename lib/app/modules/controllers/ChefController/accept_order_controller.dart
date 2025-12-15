@@ -1308,7 +1308,7 @@ class AcceptOrderController extends GetxController {
   }
 
   // ✅ NEW: Handle order cancelled event
-  void _handleOrderCancelled(dynamic rawData) {
+  Future<void> _handleOrderCancelled(dynamic rawData) async {
     developer.log('🚫 ORDER CANCELLED EVENT RECEIVED', name: 'AcceptOrders.Socket');
 
     final data = _parseSocketData(rawData);
@@ -1362,16 +1362,14 @@ class AcceptOrderController extends GetxController {
           name: 'AcceptOrders.Socket',
         );
 
-        // ✅ Show snackbar notification
-        final context = Get.context;
-        if (context != null) {
-          SnackBarUtil.showWarning(
-            context,
-            '⚠️ Order $orderNumber has been cancelled by $cancelledBy${tableNumber.isNotEmpty ? ' (Table $tableNumber)' : ''}',
-            title: 'Order Cancelled',
-            duration: const Duration(seconds: 4),
-          );
-        }
+        await showOrderCancelledNotification(
+        orderId: orderId,
+        orderNumber: orderNumber,
+        cancelledBy: cancelledBy,
+        tableNumber: tableNumber,
+        affectedItemsCount: affectedItemsCount,
+        );
+
       } else {
         developer.log(
           '⚠️ Order #$orderId not found in local state (already removed or not loaded)',

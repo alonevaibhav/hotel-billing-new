@@ -168,3 +168,49 @@ Future<void> showGroupedOrderNotification({
     );
   }
 }
+
+/// 🚫 Show notification for cancelled order
+Future<void> showOrderCancelledNotification({
+  required int orderId,
+  required String orderNumber,
+  required String cancelledBy,
+  String? tableNumber,
+  int affectedItemsCount = 0,
+}) async {
+  try {
+    final title = '🚫 Order Cancelled';
+
+    final body = tableNumber != null && tableNumber.isNotEmpty
+        ? 'Order $orderNumber (Table $tableNumber) was cancelled'
+        : 'Order $orderNumber was cancelled';
+
+    final bigText = '''
+Order Cancelled ❌
+
+Order: $orderNumber
+${tableNumber != null && tableNumber.isNotEmpty ? 'Table: $tableNumber\n' : ''}Cancelled By: $cancelledBy
+Affected Items: $affectedItemsCount
+
+Please stop preparation immediately.
+''';
+
+    await notificationService.showBigTextNotification(
+      title: title,
+      body: body,
+      bigText: bigText,
+      payload: 'order_cancelled_$orderId',
+      priority: NotificationPriority.high,
+    );
+
+    developer.log(
+      '🚫 Cancellation notification shown for order #$orderId',
+      name: 'AcceptOrderController.Notification',
+    );
+  } catch (e) {
+    developer.log(
+      '❌ Failed to show order cancelled notification: $e',
+      name: 'AcceptOrderController.Notification',
+    );
+  }
+}
+

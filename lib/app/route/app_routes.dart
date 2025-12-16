@@ -174,6 +174,7 @@ class NavigationService {
   }
 
   static void addItems(Map<String, dynamic>? table) {
+
     router.push(AppRoutes.addItems, extra: table);
   }
 

@@ -574,6 +574,7 @@
 //
 
 import 'package:flutter/material.dart' hide Table;
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:hotelbilling/app/modules/controllers/WaiterPanelController/take_order_controller.dart';
 import 'dart:developer' as developer;
@@ -1111,6 +1112,8 @@ class _OrderProcessor {
       isNewOrder: true,
     );
 
+
+
     _showSuccessAndRefresh(context, tableInfo, tableId, successMessage);
   }
 
@@ -1143,7 +1146,7 @@ class _OrderProcessor {
   }
 
   /// Update customer information for existing order
-  Future<void> updateCustomerInfo(int orderId, String customerName, String customerPhone) async {
+  Future<void> updateCustomerInfo(int orderId, String customerName, String customerPhone,) async {
     try {
       _controller.isLoading.value = true;
 
@@ -1155,23 +1158,17 @@ class _OrderProcessor {
 
       developer.log('✅ Customer info updated for order: $orderId', name: 'ORDER_API');
 
-      if (Get.context != null) {
-        SnackBarUtil.showSuccess(
-          Get.context!,
-          'Customer information updated successfully',
-          title: 'Updated',
-          duration: const Duration(seconds: 2),
-        );
-      }
+
+      Fluttertoast.showToast(
+        msg: 'Customer information updated successfully',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 2,
+      );
+
+
     } catch (e) {
       developer.log('❌ Error updating customer info: $e', name: 'ORDER_API');
-      if (Get.context != null) {
-        SnackBarUtil.showError(
-          Get.context!,
-          'Failed to update customer information',
-          title: 'Error',
-        );
-      }
     } finally {
       _controller.isLoading.value = false;
     }

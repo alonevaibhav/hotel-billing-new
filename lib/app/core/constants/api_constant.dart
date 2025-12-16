@@ -1,14 +1,14 @@
 class ApiConstants {
 
   // Base URL
-  static const String baseUrl = "https://api-dev.squrepos.com";
-  // static const String baseUrl = "https://api.squrepos.com";
+  // static const String baseUrl = "https://api-dev.squrepos.com";
+  static const String baseUrl = "https://api.squrepos.com";
   // static const String baseUrl = "https://qb2267h4-3000.inc1.devtunnels.ms";
 
   //Socket Base URL
 
-  static const String socketBaseUrl = "https://api-dev.squrepos.com";
-  // static const String socketBaseUrl = "https://api.squrepos.com";
+  // static const String socketBaseUrl = "https://api-dev.squrepos.com";
+  static const String socketBaseUrl = "https://api.squrepos.com";
   // static const String socketBaseUrl = "https://qb2267h4-3000.inc1.devtunnels.ms";
 
   // Auth

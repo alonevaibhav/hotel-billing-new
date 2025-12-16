@@ -173,7 +173,7 @@ class AuthRepository {
         final userRole = employee.designation;
         final userName = employee.employeeName;
         final organizationName = employee.organizationName;
-        final organizationAddress = employee.address;
+        final organizationAddress = employee.ownerAddress;
 
         // Store in ApiService (existing)
         await ApiService.setToken(token);

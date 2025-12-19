@@ -1,6 +1,9 @@
 //
 //
+//
+//
 // import 'package:flutter/material.dart' hide Table;
+// import 'package:fluttertoast/fluttertoast.dart';
 // import 'package:get/get.dart';
 // import 'package:hotelbilling/app/modules/controllers/WaiterPanelController/take_order_controller.dart';
 // import 'dart:developer' as developer;
@@ -12,7 +15,7 @@
 // import '../../../data/repositories/order_repository.dart';
 // import '../../../route/app_routes.dart';
 // import '../../model/table_order_state_mode.dart';
-// import '../../view/WaiterPanel/TakeOrder/widgets/notifications_widget.dart';
+// import '../../widgets/notifications_widget.dart';
 //
 // /// Main controller for order management with socket integration
 // class OrderManagementController extends GetxController {
@@ -26,6 +29,9 @@
 //   final formKey = GlobalKey<FormState>();
 //   final isLoading = false.obs;
 //   final isSocketConnected = false.obs;
+//
+//   // 🆕 Navigation flag to prevent unnecessary fetching
+//   final isComingFromAddItems = false.obs;
 //
 //   // Helpers
 //   late final _socketHandler = _SocketHandler(this);
@@ -67,8 +73,22 @@
 //   void navigateToAddItems(int tableId, dynamic tableInfoData) => _uiHelper.navigateToAddItems(tableId, tableInfoData);
 //   bool canProceedToCheckout(int tableId) => _uiHelper.canProceedToCheckout(tableId);
 //
+//   Future<void> updateCustomerInfo(int orderId, String name, String phone) =>
+//       _orderProcessor.updateCustomerInfo(orderId, name, phone);
+//
 //   bool get socketConnected => isSocketConnected.value;
 //   Future<void> reconnectSocket() => _socketHandler.reconnect();
+//
+//   // 🆕 Navigation flag management
+//   void setComingFromAddItems(bool value) {
+//     isComingFromAddItems.value = value;
+//     developer.log('🚩 Navigation flag set: isComingFromAddItems = $value', name: 'NAVIGATION');
+//   }
+//
+//   void resetNavigationFlag() {
+//     isComingFromAddItems.value = false;
+//     developer.log('🔄 Navigation flag reset', name: 'NAVIGATION');
+//   }
 //
 //   // Public utility methods for external use
 //   Map<String, dynamic>? tableInfoToMap(TableInfo? tableInfo) => _uiHelper.tableInfoToMap(tableInfo);
@@ -224,8 +244,7 @@
 //
 //   TableOrderState getTableState(int tableId) {
 //     final state = _controller.tableOrders.putIfAbsent(
-//       tableId,
-//           () => TableOrderState(tableId: tableId),
+//       tableId, () => TableOrderState(tableId: tableId),
 //     );
 //     developer.log("Table loaded ($tableId). Items: ${state.orderItems.length}", name: "STATE");
 //     return state;
@@ -236,16 +255,30 @@
 //     _controller.activeTableId.value = tableId;
 //     final state = getTableState(tableId);
 //     final orderId = tableInfo?.currentOrder?.orderId ?? 0;
+//     final tableStatus = tableInfo?.table.status ?? 'unknown';
 //
-//     developer.log('Active table: $tableId, Order: $orderId', name: 'STATE');
+//     developer.log('Active table: $tableId, Order: $orderId, Status: $tableStatus', name: 'STATE');
 //
-//     if (orderId > 0 && !state.hasLoadedOrder.value) {
+//     // 🆕 Check navigation flag before fetching
+//     if (_controller.isComingFromAddItems.value) {
+//       developer.log('⏭️ Skipping fetch - coming from Add Items', name: 'STATE');
+//       return;
+//     }
+//
+//     // ✅ CRITICAL FIX: Reset state if table is available and has no current order
+//     if (orderId <= 0 && tableStatus.toLowerCase() == 'available') {
+//       developer.log('🧹 Table is available with no order - clearing stale state', name: 'STATE');
+//       state.clear();
+//       state.hasLoadedOrder.value = false;
+//       return; // Don't fetch anything
+//     }
+//
+//     // Fetch order logic - only when there's an actual order
+//     if (orderId > 0) {
+//       developer.log('📥 Fetching order: $orderId for table: $tableId', name: 'STATE');
 //       _controller.fetchOrder(orderId, tableId);
-//     } else if (orderId <= 0 && state.placedOrderId.value != null && state.placedOrderId.value! > 0 && !state.hasLoadedOrder.value) {
-//       _controller.fetchOrder(state.placedOrderId.value!, tableId);
 //     }
 //   }
-//
 //   void resetTableStateIfNeeded(int tableId, TableInfo? tableInfo) {
 //     final state = getTableState(tableId);
 //     final orderId = tableInfo?.currentOrder?.orderId ?? 0;
@@ -408,7 +441,7 @@
 //
 //   Future<void> fetchOrder(int orderId, int tableId) async {
 //     final state = _controller.getTableState(tableId);
-//     if (state.isLoadingOrder.value || orderId == 0 || state.hasLoadedOrder.value) return;
+//     if (state.isLoadingOrder.value || orderId == 0) return;
 //
 //     try {
 //       state.isLoadingOrder.value = true;
@@ -422,19 +455,39 @@
 //       state.orderItems.addAll(processedItems);
 //
 //       _controller._itemManager._updateTotal(state);
-//       developer.log('Order fetched: ${state.orderItems.length} items', name: 'ORDER_API');
+//       state.hasLoadedOrder.value = true;
+//       developer.log('✅ Order fetched: ${state.orderItems.length} items', name: 'ORDER_API');
 //     } catch (e) {
-//       developer.log('Error fetching order: $e', name: 'ORDER_API');
+//       developer.log('❌ Error fetching order: $e', name: 'ORDER_API');
 //     } finally {
 //       state.isLoadingOrder.value = false;
-//       state.hasLoadedOrder.value = true;
 //     }
 //   }
 //
+//   /// Modified proceedToCheckout to handle customer info updates
 //   Future<void> proceedToCheckout(int tableId, BuildContext context, dynamic tableInfoData, List<Map<String, dynamic>> orderItems) async {
 //     final tableInfo = _controller._stateManager._parseTableInfo(tableInfoData);
+//     final state = _controller.getTableState(tableId);
+//
+//     // Check if there's an existing order and customer info has changed
+//     if (state.isReorderScenario && state.placedOrderId.value != null) {
+//       final hasCustomerInfo = state.fullNameController.text.trim().isNotEmpty ||
+//           state.phoneController.text.trim().isNotEmpty;
+//
+//       // Update customer info if provided
+//       if (hasCustomerInfo) {
+//         await updateCustomerInfo(
+//           state.placedOrderId.value!,
+//           state.fullNameController.text.trim(),
+//           state.phoneController.text.trim(),
+//         );
+//       }
+//     }
+//
 //     await _processOrder(tableId, context, tableInfo, orderItems, 'KOT sent to manager');
 //   }
+//
+//
 //
 //   Future<void> _processOrder(int tableId, BuildContext context, TableInfo? tableInfo, List<Map<String, dynamic>> orderItems, String successMessage) async {
 //     try {
@@ -488,6 +541,8 @@
 //       isNewOrder: true,
 //     );
 //
+//
+//
 //     _showSuccessAndRefresh(context, tableInfo, tableId, successMessage);
 //   }
 //
@@ -511,10 +566,46 @@
 //     final tableNumber = tableInfo?.table.tableNumber ?? tableId.toString();
 //     SnackBarUtil.showSuccess(context, '$message for Table $tableNumber', title: 'Success', duration: const Duration(seconds: 2));
 //
+//     // 🆕 Reset navigation flag after successful order
+//     _controller.resetNavigationFlag();
+//
 //     _controller.getTableState(tableId).hasLoadedOrder.value = false;
 //     Get.find<TakeOrdersController>().refreshTables();
 //     NavigationService.goBack();
 //   }
+//
+//   /// Update customer information for existing order
+//   Future<void> updateCustomerInfo(int orderId, String customerName, String customerPhone,) async {
+//     try {
+//       _controller.isLoading.value = true;
+//
+//       await _controller._orderRepository.updateCustomerInformation(
+//         orderId,
+//         customerName.trim(),
+//         customerPhone.trim(),
+//       );
+//
+//       developer.log('✅ Customer info updated for order: $orderId', name: 'ORDER_API');
+//
+//
+//       Fluttertoast.showToast(
+//         msg: 'Customer information updated successfully',
+//         toastLength: Toast.LENGTH_SHORT,
+//         gravity: ToastGravity.BOTTOM,
+//         timeInSecForIosWeb: 2,
+//       );
+//
+//
+//     } catch (e) {
+//       developer.log('❌ Error updating customer info: $e', name: 'ORDER_API');
+//     } finally {
+//       _controller.isLoading.value = false;
+//     }
+//   }
+//
+//
+//
+//
 // }
 //
 // // ==================== UI HELPER ====================
@@ -538,10 +629,15 @@
 //
 //   void navigateToAddItems(int tableId, dynamic tableInfoData) {
 //     try {
+//       // 🆕 Set flag before navigation
+//       _controller.setComingFromAddItems(true);
+//
 //       final tableMap = tableInfoData is TableInfo ? tableInfoToMap(tableInfoData) : (tableInfoData as Map<String, dynamic>?);
 //       NavigationService.addItems(tableMap);
 //     } catch (e) {
 //       developer.log('Navigation error: $e', name: 'UI');
+//       // 🆕 Reset flag on error
+//       _controller.resetNavigationFlag();
 //       SnackBarUtil.showError(Get.context!, 'Unable to proceed', title: 'Error');
 //     }
 //   }
@@ -571,7 +667,11 @@
 //   }
 // }
 //
-//
+
+
+
+
+
 
 import 'package:flutter/material.dart' hide Table;
 import 'package:fluttertoast/fluttertoast.dart';
@@ -1006,6 +1106,7 @@ class _ItemManager {
 }
 
 // ==================== ORDER PROCESSOR ====================
+// ==================== ORDER PROCESSOR ====================
 class _OrderProcessor {
   final OrderManagementController _controller;
   _OrderProcessor(this._controller);
@@ -1021,6 +1122,18 @@ class _OrderProcessor {
       state.placedOrderId.value = orderData.data.order.id;
       state.orderItems.clear();
       state.frozenItems.clear();
+
+      // 🆕 Load customer information into controllers
+      final customerName = orderData.data.order.customerName ?? '';
+      final customerPhone = orderData.data.order.customerPhone ?? '';
+
+      state.fullNameController.text = customerName;
+      state.phoneController.text = customerPhone;
+
+      developer.log(
+        '✅ Customer info loaded - Name: "$customerName", Phone: "$customerPhone"',
+        name: 'ORDER_API',
+      );
 
       final processedItems = TableOrderService.processOrderItems(orderData.data.items, state.frozenItems);
       state.orderItems.addAll(processedItems);
@@ -1057,8 +1170,6 @@ class _OrderProcessor {
 
     await _processOrder(tableId, context, tableInfo, orderItems, 'KOT sent to manager');
   }
-
-
 
   Future<void> _processOrder(int tableId, BuildContext context, TableInfo? tableInfo, List<Map<String, dynamic>> orderItems, String successMessage) async {
     try {
@@ -1112,8 +1223,6 @@ class _OrderProcessor {
       isNewOrder: true,
     );
 
-
-
     _showSuccessAndRefresh(context, tableInfo, tableId, successMessage);
   }
 
@@ -1137,16 +1246,14 @@ class _OrderProcessor {
     final tableNumber = tableInfo?.table.tableNumber ?? tableId.toString();
     SnackBarUtil.showSuccess(context, '$message for Table $tableNumber', title: 'Success', duration: const Duration(seconds: 2));
 
-    // 🆕 Reset navigation flag after successful order
     _controller.resetNavigationFlag();
-
     _controller.getTableState(tableId).hasLoadedOrder.value = false;
     Get.find<TakeOrdersController>().refreshTables();
     NavigationService.goBack();
   }
 
   /// Update customer information for existing order
-  Future<void> updateCustomerInfo(int orderId, String customerName, String customerPhone,) async {
+  Future<void> updateCustomerInfo(int orderId, String customerName, String customerPhone) async {
     try {
       _controller.isLoading.value = true;
 
@@ -1158,27 +1265,19 @@ class _OrderProcessor {
 
       developer.log('✅ Customer info updated for order: $orderId', name: 'ORDER_API');
 
-
       Fluttertoast.showToast(
         msg: 'Customer information updated successfully',
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
         timeInSecForIosWeb: 2,
       );
-
-
     } catch (e) {
       developer.log('❌ Error updating customer info: $e', name: 'ORDER_API');
     } finally {
       _controller.isLoading.value = false;
     }
   }
-
-
-
-
 }
-
 // ==================== UI HELPER ====================
 class _UIHelper {
   final OrderManagementController _controller;
@@ -1237,4 +1336,5 @@ class _UIHelper {
     };
   }
 }
+
 

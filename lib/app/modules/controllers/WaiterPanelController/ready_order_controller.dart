@@ -1,3 +1,8 @@
+//
+//
+//
+//
+//
 // import 'package:get/get.dart';
 // import 'dart:developer' as developer;
 // import 'dart:async';
@@ -28,8 +33,7 @@
 //   ReadyOrderResponse? _readyOrderResponse;
 //
 //   // Socket & debounce
-//   final SocketConnectionManager _socketManager =
-//       SocketConnectionManager.instance;
+//   final SocketConnectionManager _socketManager = SocketConnectionManager.instance;
 //   Timer? _refreshDebounceTimer;
 //   final _refreshDebounceDelay = const Duration(milliseconds: 500);
 //   bool _isRefreshing = false;
@@ -42,6 +46,10 @@
 //   void onInit() {
 //     super.onInit();
 //     developer.log('ReadyOrderController initialized', name: 'ReadyOrders');
+//
+//     // ✅ CRITICAL: Add catch-all listener to see ALL events
+//     _setupDebugListener();
+//
 //     _setupSocketListeners();
 //     isSocketConnected.value = _socketManager.connectionStatus;
 //     fetchReadyOrders();
@@ -53,6 +61,38 @@
 //     _removeSocketListeners();
 //     developer.log('ReadyOrderController disposed', name: 'ReadyOrders');
 //     super.onClose();
+//   }
+//
+//   /// ==================== DEBUG LISTENER ====================
+//
+//   /// ✅ CRITICAL: Catch-all listener to see EVERY socket event
+//   void _setupDebugListener() {
+//     developer.log('🔍 Setting up debug listener for ALL events', name: 'ReadyOrders.Debug');
+//
+//     _socketManager.socketService.socket?.onAny((event, data) {
+//       developer.log(
+//           '🔔 [DEBUG] Socket event received:\n'
+//               'Event: $event\n'
+//               'Data: $data',
+//           name: 'ReadyOrders.Debug'
+//       );
+//
+//       // Log the data structure
+//       if (data != null) {
+//         developer.log(
+//             '📋 [DEBUG] Data type: ${data.runtimeType}\n'
+//                 'Data content: ${data.toString()}',
+//             name: 'ReadyOrders.Debug'
+//         );
+//       }
+//
+//       // ✅ TEST: Manually call handler to verify it works
+//       if (event == 'item_ready_to_serve') {
+//         developer.log('🧪 [TEST] Manually calling handler for item_ready_to_serve',
+//             name: 'ReadyOrders.Debug');
+//         _handleItemReady(data);
+//       }
+//     });
 //   }
 //
 //   /// ==================== DATA GROUPING ====================
@@ -224,7 +264,9 @@
 //     developer.log('🔌 Setting up socket listeners', name: 'ReadyOrders.Socket');
 //     _removeSocketListeners();
 //
-//     final eventHandlers = {
+//     // ✅ FIXED: Direct registration without complex wrapping
+//     final events = {
+//       'item_ready_to_serve': _handleItemReady,
 //       'order_ready_to_serve': _handleOrderReadyToServe,
 //       'order_status_update': _handleOrderStatusUpdate,
 //       'order_served': _handleOrderServed,
@@ -232,22 +274,38 @@
 //       'new_order': _handleGenericUpdate,
 //       'placeOrder_ack': _handleGenericUpdate,
 //       'item_ready': _handleItemReady,
+//       'item_status_update': _handleItemStatusUpdate,
+//       'item_status_change': _handleItemReady,
+//       'kitchen_item_ready': _handleItemReady,
+//       'order_ready': _handleOrderReadyToServe,
+//       'ready_to_serve': _handleOrderReadyToServe,
 //     };
 //
-//     eventHandlers.forEach((event, handler) {
-//       _socketManager.socketService.on(event, handler);
-//       developer.log('Registered listener for: $event',
-//           name: 'ReadyOrders.Socket');
+//     events.forEach((eventName, handler) {
+//       _socketManager.socketService.on(eventName, (dynamic data) {
+//         developer.log('🎯 Event "$eventName" triggered, calling handler...',
+//             name: 'ReadyOrders.Socket');
+//         try {
+//           handler(data);
+//           developer.log('✅ Handler completed for: $eventName',
+//               name: 'ReadyOrders.Socket');
+//         } catch (e, stackTrace) {
+//           developer.log('❌ Handler error for $eventName: $e\n$stackTrace',
+//               name: 'ReadyOrders.Socket.Error');
+//         }
+//       });
+//       developer.log('✓ Registered: $eventName', name: 'ReadyOrders.Socket');
 //     });
 //
 //     ever(_socketManager.isConnected, _onSocketConnectionChanged);
 //
-//     developer.log('✅ ${eventHandlers.length} socket listeners registered',
+//     developer.log('✅ ${events.length} socket listeners registered',
 //         name: 'ReadyOrders.Socket');
 //   }
 //
 //   void _removeSocketListeners() {
 //     final events = [
+//       'item_ready_to_serve',  // ✅ The correct event name!
 //       'order_ready_to_serve',
 //       'order_status_update',
 //       'order_served',
@@ -255,6 +313,11 @@
 //       'new_order',
 //       'placeOrder_ack',
 //       'item_ready',
+//       'item_status_update',
+//       'item_status_change',
+//       'kitchen_item_ready',
+//       'order_ready',
+//       'ready_to_serve',
 //     ];
 //     events.forEach(_socketManager.socketService.off);
 //     developer.log('✅ Socket listeners removed', name: 'ReadyOrders.Socket');
@@ -267,34 +330,89 @@
 //
 //   /// ==================== SOCKET EVENT HANDLERS ====================
 //
-//   void _handleItemReady(dynamic rawData) {
+//   /// ✅ NEW: Handle item_status_update events
+//   void _handleItemStatusUpdate(dynamic rawData) {
 //     final data = _parseSocketData(rawData);
 //     if (data == null) return;
 //
-//     developer.log('🍽️ ITEM READY EVENT', name: 'ReadyOrders.Socket');
+//     developer.log('📊 ITEM STATUS UPDATE EVENT', name: 'ReadyOrders.Socket');
 //
 //     final itemData = data['data'] ?? data;
+//     final status = itemData['item_status'] ?? itemData['status'];
 //     final orderId = _extractOrderId(itemData);
 //     final tableNumber = _extractTableNumber(itemData);
-//     final timestamp = data['timestamp'] ?? DateTime.now().toIso8601String();
-//     final eventId = 'item-ready-$orderId-$timestamp';
 //
-//     if (_isDuplicateEvent(eventId)) return;
-//
-//     developer.log('📋 Item ready for Order #$orderId - Table $tableNumber',
+//     developer.log('Item status: $status for order #$orderId',
 //         name: 'ReadyOrders.Socket');
+//
+//     // If item became ready, refresh
+//     if (status == 'ready') {
+//       _debouncedRefreshOrders();
+//       showReadyToServeNotification(orderId, tableNumber);
+//     } else if (status == 'served') {
+//       _debouncedRefreshOrders();
+//       showOrderServedNotification(orderId, tableNumber);
+//     }
+//   }
+//
+//   void _handleItemReady(dynamic rawData) {
+//     developer.log('🍽️ ITEM READY HANDLER CALLED', name: 'ReadyOrders.Socket');
+//
+//     final data = _parseSocketData(rawData);
+//     if (data == null) {
+//       developer.log('❌ Failed to parse socket data', name: 'ReadyOrders.Socket');
+//       return;
+//     }
+//
+//     developer.log('✅ Data parsed successfully', name: 'ReadyOrders.Socket');
+//
+//     // ✅ Parse the exact structure from your backend
+//     final itemData = data['data'] ?? data;
+//
+//     // Extract orderId - your backend sends it as 'orderId' not 'order_id'
+//     final orderId = itemData['orderId'] ??
+//         itemData['order_id'] ??
+//         itemData['id'] ?? 0;
+//
+//     final tableNumber = itemData['table_number']?.toString() ?? 'Unknown';
+//     final itemName = itemData['item_name'] ?? 'Item';
+//     final timestamp = data['timestamp'] ?? DateTime.now().toIso8601String();
+//     final eventId = 'item-ready-$orderId-${itemData['itemId']}-$timestamp';
+//
+//     developer.log(
+//         '📊 Extracted data: orderId=$orderId, table=$tableNumber, item=$itemName',
+//         name: 'ReadyOrders.Socket'
+//     );
+//
+//     if (_isDuplicateEvent(eventId)) {
+//       developer.log('⏭️ Duplicate event detected: $eventId', name: 'ReadyOrders.Socket');
+//       return;
+//     }
+//
+//     developer.log(
+//         '📋 Item ready: $itemName for Order #$orderId - Table $tableNumber',
+//         name: 'ReadyOrders.Socket'
+//     );
+//
+//     developer.log('🔄 Calling debounced refresh...', name: 'ReadyOrders.Socket');
 //     _debouncedRefreshOrders();
 //
+//     developer.log('🔔 Showing notification...', name: 'ReadyOrders.Socket');
 //     showReadyToServeNotification(orderId, tableNumber);
 //
 //     if (Get.context != null && orderId > 0) {
+//       developer.log('✅ Showing snackbar', name: 'ReadyOrders.Socket');
 //       SnackBarUtil.showSuccess(
 //         Get.context!,
-//         'New item ready to serve',
+//         '$itemName is ready to serve',
 //         title: '🍽️ Table $tableNumber',
 //         duration: const Duration(seconds: 3),
 //       );
+//     } else {
+//       developer.log('⚠️ Context null or orderId invalid', name: 'ReadyOrders.Socket');
 //     }
+//
+//     developer.log('✅ Handler completed', name: 'ReadyOrders.Socket');
 //   }
 //
 //   void _handleOrderReadyToServe(dynamic rawData) {
@@ -464,15 +582,17 @@
 //   }
 //
 //   void _debouncedRefreshOrders() {
-//     developer.log('🔄 Debouncing refresh...', name: 'ReadyOrders.Socket');
+//     developer.log('🔄 Debouncing refresh... (timer will fire in ${_refreshDebounceDelay.inMilliseconds}ms)',
+//         name: 'ReadyOrders.Socket');
 //     _refreshDebounceTimer?.cancel();
 //     _refreshDebounceTimer = Timer(_refreshDebounceDelay, () {
+//       developer.log('⏰ Debounce timer fired!', name: 'ReadyOrders.Socket');
 //       if (!_isRefreshing) {
-//         developer.log('⏰ Executing debounced refresh',
+//         developer.log('⏰ Executing debounced refresh - calling fetchReadyOrders()',
 //             name: 'ReadyOrders.Socket');
 //         fetchReadyOrders();
 //       } else {
-//         developer.log('⏭️ Skipping refresh - already in progress',
+//         developer.log('⏭️ Skipping refresh - already in progress (isRefreshing=$_isRefreshing)',
 //             name: 'ReadyOrders.Socket');
 //       }
 //     });
@@ -482,37 +602,56 @@
 //
 //   Future<void> fetchReadyOrders({bool isRefresh = false}) async {
 //     if (_isRefreshing) {
-//       developer.log('⏭️ Already refreshing', name: 'ReadyOrders');
+//       developer.log('⏭️ Already refreshing - skipping', name: 'ReadyOrders');
 //       return;
 //     }
 //
 //     try {
 //       _isRefreshing = true;
+//       developer.log('🚀 Starting fetch - isRefresh=$isRefresh', name: 'ReadyOrders');
+//
 //       if (isRefresh) {
 //         isRefreshing.value = true;
+//         developer.log('📊 Set isRefreshing observable to true', name: 'ReadyOrders');
 //       } else {
 //         isLoading.value = true;
+//         developer.log('📊 Set isLoading observable to true', name: 'ReadyOrders');
 //       }
 //       errorMessage.value = '';
 //
+//       developer.log('📡 Calling repository.getReadyToServeOrders()', name: 'ReadyOrders');
 //       final apiResponse = await _repository.getReadyToServeOrders();
+//
+//       developer.log('📥 API response received - success: ${apiResponse.success}', name: 'ReadyOrders');
 //
 //       if (apiResponse.success && apiResponse.data != null) {
 //         _readyOrderResponse = apiResponse.data;
 //
 //         if (_readyOrderResponse?.success == true) {
+//           final itemCount = _readyOrderResponse!.data.items.length;
+//           developer.log('✅ Got $itemCount items from API', name: 'ReadyOrders');
+//
 //           readyItems.value = _readyOrderResponse!.data.items;
+//           developer.log('📊 Updated readyItems observable', name: 'ReadyOrders');
+//
 //           _groupItemsByOrder();
 //           developer.log(
 //               '✅ ${readyItems.length} ready items loaded, grouped into ${groupedOrders.length} orders',
 //               name: 'ReadyOrders');
+//
+//           // Force UI update
+//           readyItems.refresh();
+//           groupedOrders.refresh();
+//           developer.log('🔄 Forced observable refresh', name: 'ReadyOrders');
 //         } else {
 //           errorMessage.value =
 //               _readyOrderResponse?.message ?? 'Failed to fetch orders';
+//           developer.log('❌ Response not successful: ${errorMessage.value}', name: 'ReadyOrders');
 //         }
 //       } else {
 //         errorMessage.value =
 //             apiResponse.errorMessage ?? 'Failed to fetch orders';
+//         developer.log('❌ API call failed: ${errorMessage.value}', name: 'ReadyOrders');
 //       }
 //     } catch (e) {
 //       errorMessage.value = e.toString();
@@ -521,6 +660,7 @@
 //       isLoading.value = false;
 //       isRefreshing.value = false;
 //       _isRefreshing = false;
+//       developer.log('✅ Fetch completed - reset flags', name: 'ReadyOrders');
 //     }
 //   }
 //
@@ -572,9 +712,6 @@
 // }
 
 
-
-
-
 import 'package:get/get.dart';
 import 'dart:developer' as developer;
 import 'dart:async';
@@ -610,6 +747,9 @@ class ReadyOrderController extends GetxController {
   final _refreshDebounceDelay = const Duration(milliseconds: 500);
   bool _isRefreshing = false;
   final Set<String> _processedEvents = {};
+
+  // ✅ NEW: Track notified orders to prevent duplicate notifications
+  final Set<int> _notifiedReadyOrders = {};
 
   // Notification service
   final NotificationService _notificationService = NotificationService.instance;
@@ -877,7 +1017,7 @@ class ReadyOrderController extends GetxController {
 
   void _removeSocketListeners() {
     final events = [
-      'item_ready_to_serve',  // ✅ The correct event name!
+      'item_ready_to_serve',
       'order_ready_to_serve',
       'order_status_update',
       'order_served',
@@ -917,10 +1057,14 @@ class ReadyOrderController extends GetxController {
     developer.log('Item status: $status for order #$orderId',
         name: 'ReadyOrders.Socket');
 
-    // If item became ready, refresh
+    // If item became ready, refresh and show notification
     if (status == 'ready') {
-      _debouncedRefreshOrders();
-      showReadyToServeNotification(orderId, tableNumber);
+      developer.log('⏰ Scheduling grouped notification for order #$orderId',
+          name: 'ReadyOrders.Socket');
+
+      Future.delayed(const Duration(seconds: 1), () {
+        fetchReadyOrdersWithNotification(orderId);
+      });
     } else if (status == 'served') {
       _debouncedRefreshOrders();
       showOrderServedNotification(orderId, tableNumber);
@@ -966,11 +1110,13 @@ class ReadyOrderController extends GetxController {
         name: 'ReadyOrders.Socket'
     );
 
-    developer.log('🔄 Calling debounced refresh...', name: 'ReadyOrders.Socket');
-    _debouncedRefreshOrders();
+    // ✅ NEW: Use grouped notification instead of simple notification
+    developer.log('⏰ Scheduling grouped notification for order #$orderId',
+        name: 'ReadyOrders.Socket');
 
-    developer.log('🔔 Showing notification...', name: 'ReadyOrders.Socket');
-    showReadyToServeNotification(orderId, tableNumber);
+    Future.delayed(const Duration(seconds: 1), () {
+      fetchReadyOrdersWithNotification(orderId);
+    });
 
     if (Get.context != null && orderId > 0) {
       developer.log('✅ Showing snackbar', name: 'ReadyOrders.Socket');
@@ -1001,20 +1147,20 @@ class ReadyOrderController extends GetxController {
     if (_isDuplicateEvent(eventId)) return;
 
     final tableNumber = _extractTableNumber(orderData);
-    final message =
-        data['message'] ?? 'Order is ready to serve for Table $tableNumber';
 
     developer.log('📋 Order #$orderId ready - Table $tableNumber',
         name: 'ReadyOrders.Socket');
-    _debouncedRefreshOrders();
 
-    showReadyToServeNotification(orderId, tableNumber);
+    // ✅ NEW: Use grouped notification
+    Future.delayed(const Duration(seconds: 1), () {
+      fetchReadyOrdersWithNotification(orderId);
+    });
 
     if (Get.context != null && orderId > 0) {
       SnackBarUtil.showSuccess(
         Get.context!,
-        message,
-        title: '🍽️ Ready to Serve - Table $tableNumber',
+        'Order ready to serve',
+        title: '🍽️ Table $tableNumber',
         duration: const Duration(seconds: 3),
       );
     }
@@ -1034,23 +1180,21 @@ class ReadyOrderController extends GetxController {
     developer.log('Status received: $status for order #$orderId',
         name: 'ReadyOrders.Socket');
 
-    if (status == 'ready_to_serve' ||
-        status == 'ready' ||
-        status == 'served' ||
-        status == 'completed') {
+    if (status == 'ready_to_serve' || status == 'ready') {
+      // ✅ NEW: Use grouped notification
+      Future.delayed(const Duration(seconds: 1), () {
+        fetchReadyOrdersWithNotification(orderId);
+      });
+    } else if (status == 'served') {
       _debouncedRefreshOrders();
+      showOrderServedNotification(orderId, tableNumber);
+    } else if (status == 'completed') {
+      _debouncedRefreshOrders();
+      showOrderCompletedNotification(orderId, tableNumber);
+    }
 
-      if (status == 'ready_to_serve' || status == 'ready') {
-        showReadyToServeNotification(orderId, tableNumber);
-      } else if (status == 'served') {
-        showOrderServedNotification(orderId, tableNumber);
-      } else if (status == 'completed') {
-        showOrderCompletedNotification(orderId, tableNumber);
-      }
-
-      if ((status == 'served' || status == 'completed') && orderId > 0) {
-        _removeOrderFromList(orderId);
-      }
+    if ((status == 'served' || status == 'completed') && orderId > 0) {
+      _removeOrderFromList(orderId);
     }
   }
 
@@ -1145,6 +1289,7 @@ class ReadyOrderController extends GetxController {
     try {
       readyItems.removeWhere((item) => item.orderId == orderId);
       _groupItemsByOrder();
+      _notifiedReadyOrders.remove(orderId);
       developer.log('✅ Order #$orderId removed from list',
           name: 'ReadyOrders.Socket');
     } catch (e, stackTrace) {
@@ -1171,6 +1316,97 @@ class ReadyOrderController extends GetxController {
   }
 
   /// ==================== API METHODS ====================
+
+  /// ✅ NEW: Fetch ready orders and show grouped notification for specific order
+  Future<void> fetchReadyOrdersWithNotification(int triggeredOrderId) async {
+    if (_isRefreshing) {
+      developer.log('⏭️ Already refreshing', name: 'ReadyOrders');
+      return;
+    }
+
+    try {
+      _isRefreshing = true;
+      isLoading.value = true;
+      errorMessage.value = '';
+
+      developer.log(
+        '📡 Fetching orders for notification trigger - order #$triggeredOrderId',
+        name: 'ReadyOrders',
+      );
+
+      final apiResponse = await _repository.getReadyToServeOrders();
+
+      if (apiResponse.success && apiResponse.data != null) {
+        _readyOrderResponse = apiResponse.data;
+
+        if (_readyOrderResponse?.success == true) {
+          readyItems.value = _readyOrderResponse!.data.items;
+          _groupItemsByOrder();
+
+          developer.log(
+              '✅ ${readyItems.length} ready items loaded, grouped into ${groupedOrders.length} orders',
+              name: 'ReadyOrders');
+
+          // Find the triggered order
+          final triggeredOrder = groupedOrders.firstWhereOrNull(
+                  (order) => order.orderId == triggeredOrderId
+          );
+
+          if (triggeredOrder != null) {
+            // Check if we've already notified for this order
+            if (!_notifiedReadyOrders.contains(triggeredOrderId)) {
+              _notifiedReadyOrders.add(triggeredOrderId);
+
+              // Prevent memory leak - clear old notifications
+              if (_notifiedReadyOrders.length > 50) {
+                _notifiedReadyOrders.clear();
+              }
+
+              // Show grouped notification
+              await showGroupedReadyOrderNotification(
+                groupedOrder: triggeredOrder,
+              );
+
+              developer.log(
+                '✅ Grouped notification shown for order #${triggeredOrder.orderId}',
+                name: 'ReadyOrders',
+              );
+            } else {
+              developer.log(
+                '⏭️ Notification already shown for order #$triggeredOrderId',
+                name: 'ReadyOrders',
+              );
+            }
+          } else {
+            developer.log(
+              '⚠️ Order #$triggeredOrderId not found in ready orders',
+              name: 'ReadyOrders',
+            );
+          }
+
+          // Force UI update
+          readyItems.refresh();
+          groupedOrders.refresh();
+        } else {
+          errorMessage.value =
+              _readyOrderResponse?.message ?? 'Failed to fetch orders';
+          developer.log('❌ Response not successful: ${errorMessage.value}',
+              name: 'ReadyOrders');
+        }
+      } else {
+        errorMessage.value =
+            apiResponse.errorMessage ?? 'Failed to fetch orders';
+        developer.log('❌ API call failed: ${errorMessage.value}',
+            name: 'ReadyOrders');
+      }
+    } catch (e, stackTrace) {
+      errorMessage.value = e.toString();
+      developer.log('❌ Fetch error: $e\n$stackTrace', name: 'ReadyOrders.Error');
+    } finally {
+      isLoading.value = false;
+      _isRefreshing = false;
+    }
+  }
 
   Future<void> fetchReadyOrders({bool isRefresh = false}) async {
     if (_isRefreshing) {
@@ -1233,6 +1469,131 @@ class ReadyOrderController extends GetxController {
       isRefreshing.value = false;
       _isRefreshing = false;
       developer.log('✅ Fetch completed - reset flags', name: 'ReadyOrders');
+    }
+  }
+
+  /// ==================== NOTIFICATION METHODS ====================
+
+  /// ✅ NEW: Show grouped notification for ready order with item details
+  Future<void> showGroupedReadyOrderNotification({
+    required GroupedOrder groupedOrder,
+  }) async {
+    try {
+      final itemCount = groupedOrder.totalItems;
+
+      // Build item list (max 5 items shown in notification)
+      final itemNames = groupedOrder.items
+          .map((item) => '${item.quantity}x ${item.itemName}')
+          .take(5)
+          .join(', ');
+
+      final moreItems = groupedOrder.items.length > 5
+          ? ' and ${groupedOrder.items.length - 5} more...'
+          : '';
+
+      final title = '🍽️ Order Ready to Serve';
+
+      final body = groupedOrder.counterBilling == 1
+          ? 'Counter Order #${groupedOrder.orderId} - $itemCount ${itemCount == 1 ? 'item' : 'items'}'
+          : 'Order #${groupedOrder.orderId} - Table ${groupedOrder.tableNumber} - $itemCount ${itemCount == 1 ? 'item' : 'items'}';
+
+      final bigText = groupedOrder.counterBilling == 1
+          ? 'Counter order #${groupedOrder.orderId} is ready to serve:\n\n'
+          '$itemNames$moreItems\n\n'
+          'Total items: $itemCount\n'
+          'Total amount: ${formatCurrency(groupedOrder.totalAmount)}\n\n'
+          'Please serve this order to the customer.'
+          : 'Order #${groupedOrder.orderId} for Table ${groupedOrder.tableNumber} is ready to serve:\n\n'
+          '$itemNames$moreItems\n\n'
+          'Total items: $itemCount\n'
+          'Total amount: ${formatCurrency(groupedOrder.totalAmount)}\n\n'
+          'Please serve this order to the customer.';
+
+      await _notificationService.showBigTextNotification(
+        title: title,
+        body: body,
+        bigText: bigText,
+        payload: 'ready_order_${groupedOrder.orderId}',
+        priority: NotificationPriority.high,
+      );
+
+      developer.log(
+        'Grouped notification shown for ready order #${groupedOrder.orderId}',
+        name: 'ReadyOrders.Notification',
+      );
+    } catch (e) {
+      developer.log(
+        'Failed to show grouped notification: $e',
+        name: 'ReadyOrders.Notification',
+      );
+    }
+  }
+
+  /// ✅ DEPRECATED: Keep for backward compatibility, but use grouped notification instead
+  @Deprecated('Use showGroupedReadyOrderNotification instead')
+  Future<void> showReadyToServeNotification(int orderId, String tableNumber) async {
+    try {
+      await _notificationService.showBigTextNotification(
+        title: '🍽️ Order Ready to Serve',
+        body: 'Order #$orderId is ready for Table $tableNumber',
+        bigText: 'The kitchen has finished preparing Order #$orderId for Table $tableNumber. Please serve the order to the customer.',
+        payload: 'ready_order_$orderId',
+        priority: NotificationPriority.high,
+      );
+
+      developer.log(
+        'Ready to serve notification shown for order #$orderId',
+        name: 'ReadyOrders.Notification',
+      );
+    } catch (e) {
+      developer.log(
+        'Failed to show ready notification: $e',
+        name: 'ReadyOrders.Notification',
+      );
+    }
+  }
+
+  Future<void> showOrderServedNotification(int orderId, String tableNumber) async {
+    try {
+      await _notificationService.showBigTextNotification(
+        title: '✅ Order Served',
+        body: 'Order #$orderId for Table $tableNumber has been served',
+        bigText: 'Order #$orderId for Table $tableNumber has been successfully served to the customer.',
+        payload: 'served_order_$orderId',
+        priority: NotificationPriority.medium,
+      );
+
+      developer.log(
+        'Order served notification shown for order #$orderId',
+        name: 'ReadyOrders.Notification',
+      );
+    } catch (e) {
+      developer.log(
+        'Failed to show served notification: $e',
+        name: 'ReadyOrders.Notification',
+      );
+    }
+  }
+
+  Future<void> showOrderCompletedNotification(int orderId, String tableNumber) async {
+    try {
+      await _notificationService.showBigTextNotification(
+        title: '🎉 Order Completed',
+        body: 'Order #$orderId for Table $tableNumber is completed',
+        bigText: 'Order #$orderId for Table $tableNumber has been completed and billing is done.',
+        payload: 'completed_order_$orderId',
+        priority: NotificationPriority.low,
+      );
+
+      developer.log(
+        'Order completed notification shown for order #$orderId',
+        name: 'ReadyOrders.Notification',
+      );
+    } catch (e) {
+      developer.log(
+        'Failed to show completed notification: $e',
+        name: 'ReadyOrders.Notification',
+      );
     }
   }
 

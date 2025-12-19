@@ -2335,6 +2335,9 @@ class AcceptOrderController extends GetxController {
   }
 
   Future<void> rejectItem(BuildContext context) async {
+    final String itemReason = reasonController.text.trim();
+
+
     if (reasonController.text.trim().isEmpty) {
       SnackBarUtil.showWarning(
         context,
@@ -2344,6 +2347,17 @@ class AcceptOrderController extends GetxController {
       );
       return;
     }
+
+    if (itemReason.length < 10) {
+      SnackBarUtil.showWarning(
+        context,
+        'Reason must be at least 10 characters long',
+        title: 'Invalid Reason',
+        duration: const Duration(seconds: 2),
+      );
+      return;
+    }
+
 
     if (selectedOrderId.value == null || selectedItemId.value == null) return;
 

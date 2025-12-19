@@ -557,5 +557,5 @@ class NotificationService extends GetxService {
 enum NotificationPriority {
   low,
   normal,
-  high,
+  high, medium,
 }

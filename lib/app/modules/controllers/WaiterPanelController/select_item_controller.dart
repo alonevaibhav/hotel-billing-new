@@ -669,10 +669,6 @@
 //
 
 
-
-
-
-
 import 'package:flutter/material.dart' hide Table;
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
@@ -1105,7 +1101,6 @@ class _ItemManager {
   }
 }
 
-// ==================== ORDER PROCESSOR ====================
 // ==================== ORDER PROCESSOR ====================
 class _OrderProcessor {
   final OrderManagementController _controller;
